@@ -68,3 +68,65 @@ def test_plan_all_banks_scope(client, auth, active_question):
     plan = next(p for p in client.get("/api/v1/plans", headers=auth).json()
                 if p["name"] == "全部")
     assert plan["today_done"] >= 1 and plan["goal_met"] is True  # 全库口径，含其他用例的作答
+
+
+def test_relearning_does_not_inflate_daily_goal(client, auth, active_question):
+    plan = client.post("/api/v1/plans", headers=auth, json={
+        "name": "唯一题数", "bank_id": None, "daily_goal": 10}).json()
+    for client_id, rating in (("first", "good"), ("relearn", "again")):
+        response = client.post("/api/v1/reviews", headers=auth, json={
+            "question_id": active_question.id, "client_id": client_id,
+            "correct": rating != "again", "rating": rating,
+            "plan_id": plan["id"]})
+        assert response.status_code == 201
+    current = next(p for p in client.get("/api/v1/plans", headers=auth).json()
+                   if p["id"] == plan["id"])
+    assert current["today_done"] == plan["today_done"] + 1
+
+
+def test_rejects_another_users_plan(client, auth, active_question):
+    other = client.post("/api/v1/identity/users", headers=auth, json={
+        "username": "other-plan-user", "password": "pw", "role": "user"}).json()
+    other_auth = {"Authorization": f"Bearer {other['token']}"}
+    plan = client.post("/api/v1/plans", headers=other_auth, json={
+        "name": "他人计划", "daily_goal": 5}).json()
+    r = client.post("/api/v1/reviews", headers=auth, json={
+        "question_id": active_question.id, "client_id": "wrong-plan-owner",
+        "correct": True, "rating": "good", "plan_id": plan["id"]})
+    assert r.status_code == 404
+
+
+def test_rejects_question_outside_plan_bank(client, auth, active_question):
+    bank = client.post("/api/v1/questions/banks", headers=auth,
+                       json={"name": "其他题库", "description": ""}).json()
+    plan = client.post("/api/v1/plans", headers=auth, json={
+        "name": "限定题库", "bank_id": bank["id"], "daily_goal": 5}).json()
+    r = client.post("/api/v1/reviews", headers=auth, json={
+        "question_id": active_question.id, "client_id": "wrong-plan-bank",
+        "correct": True, "rating": "good", "plan_id": plan["id"]})
+    assert r.status_code == 409
+
+
+def test_legacy_log_uses_bank_scope(client, auth, admin):
+    from sqlmodel import Session
+
+    from mtt.corpus.service import create_question
+    from mtt.db import engine
+    from mtt.schedule.models import ReviewLog
+    from mtt.timeutil import utcnow
+
+    user_id, _ = admin
+    bank = client.post("/api/v1/questions/banks", headers=auth,
+                       json={"name": "旧日志题库", "description": ""}).json()
+    plan = client.post("/api/v1/plans", headers=auth, json={
+        "name": "旧日志计划", "bank_id": bank["id"], "daily_goal": 5}).json()
+    with Session(engine) as session:
+        q = create_question(session, user_id, "旧日志题", "答案",
+                            status="active", bank_id=bank["id"])
+        session.add(ReviewLog(user_id=user_id, question_id=q.id,
+                              client_id="legacy-plan-log", rating="good",
+                              reviewed_at=utcnow(), plan_id=None))
+        session.commit()
+    current = next(p for p in client.get("/api/v1/plans", headers=auth).json()
+                   if p["id"] == plan["id"])
+    assert current["today_done"] == 1

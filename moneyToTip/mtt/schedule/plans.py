@@ -1,9 +1,8 @@
 """训练计划接口：每日目标 + 加练（百词斩式玩法，§16.2 一等公民）。"""
 
-from datetime import UTC, date, datetime
-
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
+from sqlalchemy import and_, or_
 from sqlmodel import Session, func, select
 
 from mtt.corpus.models import Question, QuestionBank
@@ -23,17 +22,21 @@ class PlanCreate(BaseModel):
 
 
 def _plan_progress(session: Session, user: User, plan: Plan) -> int:
-    """今日已在计划范围内答了多少题（不含 AI 求助）。
-    "今日"按本地时区 0 点起算，换算 UTC 后与库中时间串比较。"""
-    day_start = local_day_start_utc()
-    stmt = (select(func.count())
-            .select_from(ReviewLog)
-            .join(Question, Question.id == ReviewLog.question_id)
-            .where(ReviewLog.user_id == user.id,
-                   ReviewLog.is_help_request == False,  # noqa: E712
-                   ReviewLog.reviewed_at >= day_start))
+    """今日在计划内完成的不同题目数；重复复习和 AI 求助不计入。"""
+    stmt = (
+        select(func.count(func.distinct(ReviewLog.question_id)))
+        .select_from(ReviewLog)
+        .join(Question, Question.id == ReviewLog.question_id)
+        .where(
+            ReviewLog.user_id == user.id,
+            ReviewLog.is_help_request == False,  # noqa: E712
+            ReviewLog.reviewed_at >= local_day_start_utc(),
+        )
+    )
+    legacy = ReviewLog.plan_id.is_(None)
     if plan.bank_id is not None:
-        stmt = stmt.where(Question.bank_id == plan.bank_id)
+        legacy = and_(legacy, Question.bank_id == plan.bank_id)
+    stmt = stmt.where(or_(ReviewLog.plan_id == plan.id, legacy))
     return session.exec(stmt).one()
 
 
