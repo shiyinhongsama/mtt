@@ -154,3 +154,57 @@ def test_due_filtered_by_category(client, auth, admin):
     r = client.get(f"/api/v1/reviews/due?category_id={root}", headers={
         "Authorization": "Bearer x"})
     assert r.status_code == 401
+
+
+def test_review_returns_memory_decision(client, auth, active_question):
+    payload = {"question_id": active_question.id, "client_id": "memory-1",
+               "correct": True, "rating": "good", "duration_ms": 1200}
+    r = client.post("/api/v1/reviews", headers=auth, json=payload)
+    assert r.status_code == 201
+    body = r.json()
+    assert body["decision"]["algorithm_version"] == "ebbinghaus-v1"
+    assert body["decision"]["interval_minutes"] > 0
+    assert body["state"]["due_at"] is not None
+
+
+def test_replay_does_not_advance_schedule(client, auth, active_question):
+    payload = {"question_id": active_question.id, "client_id": "memory-replay",
+               "correct": True, "rating": "good"}
+    first = client.post("/api/v1/reviews", headers=auth, json=payload).json()
+    second = client.post("/api/v1/reviews", headers=auth, json=payload).json()
+    assert second["idempotent"] is True
+    assert second["log_id"] == first["log_id"]
+    assert second["decision"] == first["decision"]
+
+
+def test_unknown_rating_is_rejected(client, auth, active_question):
+    r = client.post("/api/v1/reviews", headers=auth, json={
+        "question_id": active_question.id, "client_id": "bad-rating",
+        "correct": True, "rating": "perfect"})
+    assert r.status_code == 422
+
+
+def test_negative_duration_is_rejected(client, auth, active_question):
+    r = client.post("/api/v1/reviews", headers=auth, json={
+        "question_id": active_question.id, "client_id": "bad-duration",
+        "correct": True, "rating": "good", "duration_ms": -1})
+    assert r.status_code == 422
+
+
+def test_concurrent_replay_writes_one_log_and_one_rep(client, auth, active_question):
+    from concurrent.futures import ThreadPoolExecutor
+
+    payload = {"question_id": active_question.id, "client_id": "concurrent-replay",
+               "correct": True, "rating": "good"}
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        responses = list(pool.map(
+            lambda _: client.post("/api/v1/reviews", headers=auth, json=payload),
+            range(2),
+        ))
+    assert [r.status_code for r in responses] == [201, 201]
+    assert len({r.json()["log_id"] for r in responses}) == 1
+    exported = client.get("/api/v1/data/export", headers=auth).json()
+    logs = [x for x in exported["review_logs"] if x["client_id"] == "concurrent-replay"]
+    states = [x for x in exported["states"] if x["question_id"] == active_question.id]
+    assert len(logs) == 1
+    assert len(states) == 1 and states[0]["reps"] == 1
