@@ -30,3 +30,25 @@ def test_data_module_implemented(client, auth):
     """data 已不再是占位：导出需要鉴权。"""
     assert client.get("/api/v1/data/export").status_code == 401
     assert client.get("/api/v1/data/export", headers=auth).status_code == 200
+
+
+def test_startup_initializes_memory_schema_and_backup(client):
+    from datetime import datetime
+    from pathlib import Path
+
+    from sqlalchemy import inspect, text
+
+    from mtt.config import settings
+    from mtt.db import engine
+
+    with client:
+        response = client.get("/health")
+        assert response.status_code == 200
+    columns = {c["name"] for c in inspect(engine).get_columns("questionstate")}
+    assert {"due_at", "stability_days", "interval_minutes", "algorithm_version"} <= columns
+    with engine.connect() as conn:
+        version = conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
+    assert version == "0002_memory_state"
+    stamp = datetime.now().strftime("%Y%m%d")
+    backups = list((Path(settings.data_dir) / "backups").glob(f"mtt-{stamp}-*.db"))
+    assert backups and all(path.stat().st_size > 0 for path in backups)

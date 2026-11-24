@@ -9,11 +9,13 @@
 
 ```bash
 uv sync                      # 安装依赖
-mtt init-db                  # 初始化数据库（sqlite，默认 ./mtt.db）
+mtt init-db                  # 初始化或迁移数据库（SQLite，默认 ./mtt.db）
 mtt user-create admin --admin  # 创建管理员，输出口令与 API token
 mtt serve                    # 启动服务端 → http://127.0.0.1:8000/app/（复习端）
 uv run pytest                # 跑测试
 ```
+
+数据库使用 Alembic 版本化迁移。全新安装直接创建当前结构；旧库在启动或执行 `mtt init-db` 时自动升级，随后执行每日自动备份。
 
 ## 架构
 
@@ -50,26 +52,35 @@ npm run build   # 生产：构建到 dist/，由本服务挂在 /app/（自动�
 ```
 mtt/
 ├── config.py        # 全局配置（BYOK 模型 Key、排期算法开关）
-├── db.py / deps.py  # 数据库 / 鉴权依赖
+├── db.py / deps.py  # 版本化数据库 / 鉴权依赖
+├── alembic/         # 数据库版本与旧库升级
 ├── main.py          # FastAPI 入口
 ├── api/             # 接口聚合层（客户端只消费这里）
 ├── identity/        # [已实现] 账户、角色、令牌（R-identity）
 ├── capture/         # [模型+占位] 材料入库：Markdown 导入包（R-capture）
 ├── corpus/          # [已实现] 题库、树形分类、题目状态（R-corpus）
 ├── generate/        # [模型+占位] AI 出题与质控（R-generate）
-├── schedule/        # [已实现] 简化排期引擎 + 全量 review log（R-schedule）
-├── explain/         # [占位] 手动「问 AI」对话框（R-explain）
-├── data/            # [占位] 备份 / 导出 / 销毁（R-data）
+├── schedule/        # [已实现] 记忆排期引擎 + 全量 review log（R-schedule）
+├── explain/         # [已实现] 手动「问 AI」对话框（R-explain）
+├── data/            # [已实现] 备份 / 导出 / 导入 / 销毁（R-data）
 ├── growth/          # [已实现] 成熟知识量等统计（R-growth）
-├── anki/            # [占位] Anki 导入导出（R-anki，核心闭环后做，D5）
+├── anki/            # [已实现] Anki 导入与进度迁移（R-anki）
 └── mcp/             # [占位] 智能体接入（R-mcp，v1 仅占位）
 ```
 
 设计要点：
 - **服务端是唯一事实源**；复习端（PWA）与管理端（CLI/Web）都走 `/api/v1`
-- **术语黑名单**：内部状态码（new/learning/mastered）只在服务端，接口已映射为 新学/巩固中/已掌握
-- **幂等回写**：`client_id` 去重，重发不产生重复日志（R-api-10）
+- **术语黑名单**：内部状态码 new/learning/review/relearning 映射为 新学/学习中/稳定复习/重学中；“已掌握”只是稳定复习且间隔达到 21 天的展示标签
+- **幂等回写**：`client_id` 去重，并发重发也只产生一条日志、推进一次排期（R-api-10）
 - **零模型成本复习**：判定与标准答案不走模型；AI 只在用户主动「问 AI」时调用
+
+### 记忆排期
+
+当前使用可解释的指数遗忘近似 `R(t)=exp(-t/S)`，根据每题的回忆记录更新稳定性 `S`。
+默认目标保持率为 `0.85`；答错进入 10 分钟重学，复习间隔最短 10 分钟、最长 365 天。
+该模型是个性化排期的初始近似，不承诺保证记忆。算法版本记录在每题状态和每次决策快照中，后续可迁移到 FSRS。
+
+`GET /api/v1/reviews/due` 使用分钟级 `due_at` 排序并返回四个评分的预览；`POST /api/v1/reviews` 返回保存后的排期决策，重放同一 `client_id` 会返回首次决策快照。
 
 ## 路线图（对应需求构建顺序）
 

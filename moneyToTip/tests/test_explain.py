@@ -38,7 +38,8 @@ def test_ask_logs_help_without_changing_schedule(client, auth, admin,
         "question_id": active_question.id, "client_id": "exp-1",
         "correct": True, "rating": "good"})
     before = get_state(admin_id, active_question.id)
-    due_before = before.due_date
+    due_before = before.due_at
+    reviewed_before = client.get("/api/v1/stats", headers=auth).json()["reviewed_today"]
 
     r = client.post("/api/v1/explain/ask", headers=auth, json={
         "question_id": active_question.id, "given": "80"})
@@ -49,16 +50,16 @@ def test_ask_logs_help_without_changing_schedule(client, auth, admin,
 
     # 排期不变
     after = get_state(admin_id, active_question.id)
-    assert after.due_date == due_before
+    assert after.due_at == due_before
 
-    # 日志有求助记录；今日已答仍是 1（求助不算复习）
+    # 日志有求助记录；今日已答不增加（求助不算复习）
     with Session(db_engine) as session:
         helps = session.exec(select(ReviewLog).where(
             ReviewLog.is_help_request == True)).all()  # noqa: E712
         assert len(helps) == 1
         assert helps[0].question_id == active_question.id
     stats = client.get("/api/v1/stats", headers=auth).json()
-    assert stats["reviewed_today"] == 1
+    assert stats["reviewed_today"] == reviewed_before
 
 
 def test_ask_follow_up_keeps_history(client, auth, active_question, monkeypatch):

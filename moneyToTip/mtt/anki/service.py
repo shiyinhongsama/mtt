@@ -12,11 +12,12 @@ v1 边界：HTML 卡片转纯文本（保留换行）；图片计数但不搬入
 
 import html
 import json
+import math
 import re
 import sqlite3
 import zipfile
 from dataclasses import dataclass, field
-from datetime import date, timedelta
+from datetime import timedelta
 from pathlib import Path
 
 from sqlmodel import Session, select
@@ -24,6 +25,7 @@ from sqlmodel import Session, select
 from mtt.corpus.models import Category, Question, QuestionBank
 from mtt.corpus.service import create_question, resolve_category_path
 from mtt.schedule.models import QuestionState
+from mtt.timeutil import utcnow
 
 CLOZE_RE = re.compile(r"\{\{c\d+::(.*?)((?:::.*?))?\}\}")
 
@@ -194,7 +196,7 @@ def import_notes(session: Session, owner_id: int, notes: list[AnkiNote],
     }
     seen: set[tuple[str, str]] = set()
     categories_before = _category_count(session, owner_id)
-    today = date.today()
+    now = utcnow()
 
     for n in notes:
         if not n.deck:  # 没有任何卡片的 note
@@ -226,17 +228,21 @@ def import_notes(session: Session, owner_id: int, notes: list[AnkiNote],
         report.questions_created += 1
         report.decks.append(n.deck)
 
-        # 进度粗略迁移（R-anki-05）
+        # 进度粗略迁移到分钟级记忆状态（R-anki-05）
         if n.card_type == 2 and n.ivl > 21:
             session.add(QuestionState(
-                user_id=owner_id, question_id=q.id, status="mastered",
-                interval_days=n.ivl, reps=1, due_date=today + timedelta(days=n.ivl)))
+                user_id=owner_id, question_id=q.id, status="review", reps=1,
+                interval_minutes=n.ivl * 1440,
+                stability_days=max(n.ivl / -math.log(0.85), 1 / 1440),
+                due_at=now + timedelta(days=n.ivl)))
             report.progress_mastered += 1
         elif n.card_type in (1, 3) or (n.card_type == 2 and n.ivl > 0):
             ivl = max(1, n.ivl)
             session.add(QuestionState(
-                user_id=owner_id, question_id=q.id, status="learning",
-                interval_days=ivl, reps=1, due_date=today + timedelta(days=ivl)))
+                user_id=owner_id, question_id=q.id, status="learning", reps=1,
+                interval_minutes=ivl * 1440,
+                stability_days=max(ivl / -math.log(0.85), 1 / 1440),
+                due_at=now + timedelta(days=ivl)))
             report.progress_learning += 1
         else:
             report.progress_new += 1

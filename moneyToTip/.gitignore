@@ -6,5 +6,5 @@ __pycache__/
 
 # 数据与配置
 mtt.db
-data/
+/data/
 .env

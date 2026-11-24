@@ -43,7 +43,8 @@ def test_export_import_roundtrip(client, auth, admin, active_question):
     n_active = sum(1 for q in export["questions"] if q["status"] == "active")
     assert s["active_questions"] == n_active
     assert s["reviewed_today"] == reviewed_today  # 今日日志随导入恢复
-    n_mature = sum(1 for st in export["states"] if st["status"] == "mastered")
+    n_mature = sum(1 for st in export["states"] if st["status"] == "review"
+                   and st["interval_minutes"] >= 21 * 1440)
     assert s["mature_count"] == n_mature  # 迁移的已掌握随导入恢复
 
     # 导入的题内容一致（id 由服务端重新分配，不复用旧 id 断言）
