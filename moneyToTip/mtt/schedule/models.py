@@ -1,9 +1,9 @@
-from datetime import UTC, date, datetime
+from datetime import datetime
 
 from sqlmodel import Field, SQLModel
+from sqlalchemy import Index
 
-from mtt.timeutil import utcnow
-
+from mtt.schedule.memory import ALGORITHM_VERSION
 from mtt.timeutil import utcnow
 
 
@@ -18,12 +18,16 @@ class ReviewLog(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id", index=True)
     question_id: int = Field(foreign_key="question.id", index=True)
     client_id: str = Field(default="", index=True, unique=True)
+    plan_id: int | None = Field(default=None, foreign_key="plan.id", index=True)
 
     correct: bool = True
     rating: str = "good"        # again | hard | good | easy（四档自评，借鉴 Anki）
     duration_ms: int = 0
     is_help_request: bool = False
     reviewed_at: datetime = Field(default_factory=utcnow, index=True)
+    decision_due_at: datetime | None = None
+    decision_interval_minutes: int | None = None
+    decision_algorithm_version: str = ""
 
 
 class QuestionState(SQLModel, table=True):
@@ -33,12 +37,20 @@ class QuestionState(SQLModel, table=True):
     user_id: int = Field(foreign_key="user.id", index=True)
     question_id: int = Field(foreign_key="question.id", index=True)
 
-    status: str = "new"          # new | learning | mastered
-    interval_days: int = 0
+    status: str = "new"          # new | learning | review | relearning
     reps: int = 0
-    due_date: date = Field(default_factory=date.today, index=True)
+    lapses: int = 0
+    stability_days: float = 1.0
+    interval_minutes: int = 0
+    due_at: datetime = Field(default_factory=utcnow, index=True)
+    last_rating: str = ""
+    last_reviewed_at: datetime | None = None
+    algorithm_version: str = ALGORITHM_VERSION
 
-    __table_args__ = ({"sqlite_autoincrement": True},)
+    __table_args__ = (
+        Index("uq_questionstate_user_question", "user_id", "question_id", unique=True),
+        {"sqlite_autoincrement": True},
+    )
 
 
 class Plan(SQLModel, table=True):

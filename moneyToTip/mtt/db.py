@@ -1,5 +1,10 @@
-"""数据库连接与初始化（SQLite，可整体迁移，R-data-01）。"""
+"""数据库连接与版本化初始化（SQLite，可整体迁移，R-data-01）。"""
 
+from pathlib import Path
+
+from alembic import command
+from alembic.config import Config
+from sqlalchemy import inspect
 from sqlmodel import SQLModel, Session, create_engine
 
 from mtt.config import settings
@@ -7,23 +12,44 @@ from mtt.config import settings
 engine = create_engine(settings.database_url, echo=False)
 
 
-def init_db() -> None:
-    # 延迟导入，确保所有表的模型都已注册
+def _alembic_config() -> Config:
+    root = Path(__file__).parent
+    config = Config(str(root / "alembic.ini"))
+    config.set_main_option("script_location", str(root / "alembic"))
+    url = engine.url.render_as_string(hide_password=False).replace("%", "%%")
+    config.set_main_option("sqlalchemy.url", url)
+    return config
+
+
+def run_migrations() -> None:
+    """创建全新数据库，或将旧库和已管理库升级到当前版本。"""
     import mtt.identity.models  # noqa: F401
     import mtt.corpus.models  # noqa: F401
     import mtt.capture.models  # noqa: F401
     import mtt.schedule.models  # noqa: F401
     import mtt.generate.models  # noqa: F401
 
-    SQLModel.metadata.create_all(engine)
+    tables = set(inspect(engine).get_table_names())
+    config = _alembic_config()
+    if "alembic_version" not in tables and "user" not in tables:
+        SQLModel.metadata.create_all(engine)
+        command.stamp(config, "head")
+        return
+    if "alembic_version" not in tables:
+        command.stamp(config, "0001_baseline")
+    command.upgrade(config, "head")
     _migrate()
 
 
-def _migrate() -> None:
-    """轻量迁移：旧库补 question.bank_id 并把存量题目归入默认题库。"""
-    from sqlmodel import Session, select
+def init_db() -> None:
+    run_migrations()
 
-    from mtt.corpus.models import Question, QuestionBank
+
+def _migrate() -> None:
+    """补充早期非版本化字段，并把存量题目归入默认题库。"""
+    from sqlmodel import select
+
+    from mtt.corpus.models import Question
     from mtt.corpus.service import ensure_default_bank
     from mtt.identity.models import User
 
