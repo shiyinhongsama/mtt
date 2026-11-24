@@ -1,0 +1,23 @@
+# 顶层只做目录组织；各子目录有自己的 .gitignore 与仓库
+# 这里汇总跨工程的忽略项
+
+# Python（moneyToTip）
+__pycache__/
+*.pyc
+.venv/
+.pytest_cache/
+*.egg-info/
+
+# 数据与配置（moneyToTip）
+mtt.db
+moneyToTip/data/
+.env
+
+# 前端（moneyToTipApp / moneyToTipConsole）
+node_modules/
+dist/
+*.tsbuildinfo
+
+# 系统
+.DS_Store
+Thumbs.db

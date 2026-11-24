@@ -1,0 +1,36 @@
+# 忙里偷题 · Docker Compose
+# 用法：
+#   cp moneyToTip/.env .env        # 模型 BYOK（可选，不配则「问 AI」不可用，其余功能正常）
+#   docker compose up -d --build
+#   docker compose logs -f
+#
+# 入口（默认 8000 端口）：
+#   http://localhost:8000/          产品主页
+#   http://localhost:8000/app/      App 端（复习端 PWA）
+#   http://localhost:8000/console/  管理端（账号密码登录）
+#
+# 常用维护命令：
+#   docker compose exec moneytotip uv run mtt user-create shiyinhong --admin   # 建管理员
+#   docker compose exec moneytotip uv run mtt question-import /app/data/x.json # 导题（先把文件放进数据卷）
+#   docker compose down            # 停止（数据保留在卷里）
+#   docker compose up -d           # 再启动
+
+services:
+  moneytotip:
+    build: .
+    image: moneytotip:latest
+    container_name: moneytotip
+    ports:
+      - "8000:8000"
+    environment:
+      TZ: Asia/Shanghai
+      # 模型 BYOK：在 .env 里定义这两个变量即可（OpenAI 兼容接口）
+      MTT_MODEL_API_KEY: ${MTT_MODEL_API_KEY:-}
+      MTT_MODEL_BASE_URL: ${MTT_MODEL_BASE_URL:-https://api.minimaxi.com/v1}
+      MTT_MODEL_NAME: ${MTT_MODEL_NAME:-MiniMax-M3.1-Flash}
+    volumes:
+      - mt-data:/app/data          # sqlite 数据库 + 每日备份
+    restart: unless-stopped
+
+volumes:
+  mt-data:

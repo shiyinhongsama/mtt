@@ -1,0 +1,424 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>忙里偷题 · Money to Tip</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;700&family=Noto+Sans+SC:wght@300;400;500;700&family=Noto+Serif+SC:wght@400;500;600;700;900&family=Playfair+Display:ital,wght@0,400;0,500;0,600;1,400;1,500;1,600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --paper:#F4F1EA;
+    --paper-2:#EDE9DF;
+    --ink:#1A1815;
+    --accent:#C1442E;
+    --muted:#777268;
+    --line:#CFC9BA;
+    --font-display-en:'Playfair Display',Georgia,serif;
+    --font-display-cn:'Noto Serif SC','Songti SC','STSong',serif;
+    --font-body-en:'DM Sans',Arial,sans-serif;
+    --font-body-cn:'Noto Sans SC','PingFang SC','Microsoft YaHei',sans-serif;
+    --font-mono:'Space Mono',ui-monospace,monospace;
+  }
+
+  *{margin:0;padding:0;box-sizing:border-box;}
+  html{scroll-behavior:smooth;}
+  body{
+    background:var(--paper);
+    color:var(--ink);
+    font-family:var(--font-body-cn);
+    -webkit-font-smoothing:antialiased;
+    overflow-x:hidden;
+  }
+  ::selection{background:var(--accent);color:#fff;}
+
+  .wrap{max-width:1440px;margin:0 auto;padding:0 clamp(20px,5vw,80px);}
+  .mono{font-family:var(--font-mono);}
+  .serif{font-family:var(--font-display-cn);}
+  .accent{color:var(--accent);}
+  .rule{height:1px;background:var(--line);width:100%;}
+
+  /* ---------- NAV ---------- */
+  nav{
+    border-bottom:1px solid var(--line);
+    position:sticky;top:0;z-index:50;
+    background:rgba(244,241,234,.94);
+    backdrop-filter:saturate(180%) blur(12px);
+  }
+  .nav-in{
+    display:flex;align-items:center;justify-content:space-between;
+    height:74px;
+  }
+  .brand{
+    display:flex;align-items:baseline;gap:14px;
+    text-decoration:none;color:var(--ink);
+  }
+  .brand .mark{
+    font-family:var(--font-display-en);
+    font-style:italic;font-size:21px;font-weight:600;
+    letter-spacing:-.02em;
+  }
+  .brand .dot{width:7px;height:7px;background:var(--accent);border-radius:50%;display:inline-block;transform:translateY(-2px);}
+  .brand .cn{font-family:var(--font-display-cn);font-size:14px;font-weight:600;letter-spacing:.18em;}
+  .nav-links{display:flex;gap:38px;align-items:center;}
+  .nav-links a{
+    text-decoration:none;color:var(--ink);font-size:13px;
+    letter-spacing:.06em;position:relative;padding:4px 0;
+  }
+  .nav-links a::after{
+    content:"";position:absolute;left:0;bottom:0;height:1px;width:0;
+    background:var(--accent);transition:width .3s ease;
+  }
+  .nav-links a:hover::after{width:100%;}
+  .nav-links .idx{font-family:var(--font-mono);font-size:9px;color:var(--muted);margin-right:6px;vertical-align:top;}
+  .nav-cta{
+    font-family:var(--font-mono)!important;font-size:11px!important;
+    border:1px solid var(--ink);padding:9px 16px!important;
+    transition:background .25s,color .25s;
+  }
+  .nav-cta:hover{background:var(--ink);color:var(--paper)!important;}
+  .nav-cta:hover::after{display:none;}
+
+  /* ---------- HERO ---------- */
+  .hero{padding-top:clamp(48px,7vw,104px);padding-bottom:clamp(48px,6vw,88px);}
+  .eyebrow{
+    font-family:var(--font-mono);font-size:10px;letter-spacing:.22em;
+    color:var(--muted);text-transform:uppercase;
+    display:flex;align-items:center;gap:16px;margin-bottom:clamp(36px,5vw,64px);
+  }
+  .eyebrow .bar{width:34px;height:1px;background:var(--accent);}
+  .hero-grid{
+    display:grid;grid-template-columns:1.15fr .85fr;gap:clamp(30px,5vw,80px);align-items:center;
+  }
+  .hero h1{
+    font-family:var(--font-display-cn);font-weight:900;
+    font-size:clamp(72px,12.5vw,180px);line-height:.92;
+    letter-spacing:.04em;margin-left:-.04em;
+  }
+  .hero h1 .line{display:block;}
+  .hero h1 .steal{color:var(--accent);position:relative;}
+  .en-title{
+    font-family:var(--font-display-en);font-style:italic;font-weight:400;
+    font-size:clamp(34px,5.2vw,74px);line-height:1;margin-top:clamp(20px,3vw,34px);
+    letter-spacing:-.02em;
+  }
+  .en-title .to{color:var(--muted);font-style:italic;}
+  .slogan{
+    font-family:var(--font-display-en);font-size:clamp(19px,2.2vw,27px);
+    letter-spacing:.01em;margin-top:clamp(26px,3.5vw,44px);
+    display:flex;align-items:center;gap:14px;
+  }
+  .slogan .dash{width:26px;height:1px;background:var(--ink);display:inline-block;}
+  .desc{
+    font-size:clamp(14px,1.2vw,16px);line-height:1.95;color:var(--muted);
+    max-width:440px;margin-top:22px;font-weight:300;
+  }
+  .hero-actions{display:flex;align-items:center;gap:28px;margin-top:38px;}
+  .btn{
+    display:inline-flex;align-items:center;gap:30px;
+    background:var(--ink);color:var(--paper);
+    font-family:var(--font-body-cn);font-size:14px;font-weight:500;
+    padding:17px 24px;text-decoration:none;
+    transition:background .25s,transform .25s;
+  }
+  .btn .arrow{font-family:var(--font-mono);font-size:15px;transition:transform .25s;}
+  .btn:hover{background:var(--accent);}
+  .btn:hover .arrow{transform:translateX(5px);}
+  .btn-note{font-family:var(--font-mono);font-size:10px;color:var(--muted);letter-spacing:.05em;}
+
+  /* visual */
+  .hero-visual{position:relative;min-height:430px;display:flex;align-items:center;justify-content:center;}
+  .seal{
+    position:absolute;top:-6px;right:2%;z-index:3;
+    width:92px;height:92px;background:var(--accent);
+    display:flex;align-items:center;justify-content:center;
+    transform:rotate(-9deg);
+    box-shadow:inset 0 0 0 5px var(--accent),inset 0 0 0 6px rgba(255,255,255,.5);
+  }
+  .seal span{
+    font-family:var(--font-display-cn);font-weight:700;color:#fff;
+    font-size:26px;line-height:1.05;writing-mode:vertical-rl;letter-spacing:.05em;
+  }
+  .card{
+    background:var(--paper-2);border:1px solid var(--ink);
+    width:min(100%,380px);padding:30px 30px 26px;
+    position:relative;
+  }
+  .card.back{position:absolute;width:min(100%,380px);height:100%;top:0;left:0;background:var(--paper);border-color:var(--line);}
+  .card.back.b1{transform:rotate(6deg) translate(16px,10px);}
+  .card.back.b2{transform:rotate(-5deg) translate(-14px,14px);}
+  .card.front{z-index:2;transform:rotate(-1.5deg);box-shadow:0 18px 40px rgba(26,24,21,.08);}
+  .card-top{display:flex;justify-content:space-between;align-items:center;font-family:var(--font-mono);font-size:9px;letter-spacing:.12em;color:var(--muted);padding-bottom:16px;border-bottom:1px solid var(--line);}
+  .card-top .qnum{color:var(--accent);font-weight:700;}
+  .card-q{font-family:var(--font-display-cn);font-size:19px;font-weight:600;line-height:1.6;margin:22px 0 20px;}
+  .opt{display:flex;align-items:center;gap:13px;font-size:13px;padding:10px 0;border-top:1px solid var(--line);color:var(--muted);}
+  .opt .key{font-family:var(--font-mono);font-size:10px;width:18px;height:18px;border:1px solid var(--line);display:flex;align-items:center;justify-content:center;flex-shrink:0;}
+  .opt.right{color:var(--ink);}
+  .opt.right .key{background:var(--accent);color:#fff;border-color:var(--accent);}
+  .card-foot{margin-top:18px;font-family:var(--font-mono);font-size:9px;color:var(--muted);display:flex;justify-content:space-between;}
+
+  /* ---------- MARQUEE ---------- */
+  .marquee{border-top:1px solid var(--ink);border-bottom:1px solid var(--ink);overflow:hidden;background:var(--paper-2);}
+  .marquee-track{display:flex;white-space:nowrap;animation:scroll 26s linear infinite;width:max-content;}
+  .marquee span{
+    font-family:var(--font-display-en);font-style:italic;font-size:19px;
+    padding:14px 26px;display:inline-block;
+  }
+  .marquee i{color:var(--accent);font-style:normal;padding:0 8px;}
+  @keyframes scroll{to{transform:translateX(-50%);}}
+
+  /* ---------- SECTION SHELL ---------- */
+  section{padding:clamp(70px,10vw,130px) 0;}
+  .sec-head{display:flex;align-items:flex-start;gap:24px;margin-bottom:clamp(40px,6vw,72px);}
+  .sec-num{font-family:var(--font-mono);font-size:11px;color:var(--accent);padding-top:9px;letter-spacing:.1em;}
+  .sec-label{font-family:var(--font-mono);font-size:10px;letter-spacing:.2em;color:var(--muted);text-transform:uppercase;}
+  .sec-title{
+    font-family:var(--font-display-cn);font-weight:600;
+    font-size:clamp(34px,5vw,64px);line-height:1.25;letter-spacing:.01em;margin-top:14px;
+  }
+  .sec-title em{font-family:var(--font-display-en);font-style:italic;font-weight:400;}
+
+  /* ---------- PHILOSOPHY ---------- */
+  .philo-grid{display:grid;grid-template-columns:.8fr 1.2fr;gap:clamp(30px,6vw,90px);}
+  .philo-lead{font-family:var(--font-display-cn);font-size:clamp(22px,2.6vw,34px);font-weight:500;line-height:1.6;}
+  .philo-lead .u{border-bottom:3px solid var(--accent);padding-bottom:2px;}
+  .philo-body p{font-size:clamp(14px,1.2vw,16px);line-height:2.05;color:var(--muted);font-weight:300;margin-bottom:20px;max-width:620px;}
+  .philo-body .big-en{font-family:var(--font-display-en);font-style:italic;font-size:clamp(20px,2.2vw,28px);color:var(--ink);margin:30px 0 8px;}
+
+  /* ---------- FEATURES ---------- */
+  .features{border-top:1px solid var(--ink);}
+  .feature{
+    display:grid;grid-template-columns:90px 1fr 1fr;gap:30px;
+    padding:clamp(30px,4vw,52px) 0;border-bottom:1px solid var(--line);
+    align-items:start;transition:background .3s;
+  }
+  .feature:hover{background:rgba(237,233,223,.5);}
+  .feature .fnum{font-family:var(--font-mono);font-size:clamp(26px,3vw,40px);color:var(--line);line-height:1;}
+  .feature .ftag{display:block;font-family:var(--font-mono);font-size:9px;color:var(--accent);letter-spacing:.08em;margin-top:10px;}
+  .feature h3{font-family:var(--font-display-cn);font-size:clamp(24px,3vw,38px);font-weight:600;line-height:1.4;}
+  .feature h3 .en{display:block;font-family:var(--font-display-en);font-style:italic;font-weight:400;font-size:clamp(15px,1.5vw,20px);color:var(--accent);margin-top:8px;letter-spacing:.01em;}
+  .feature p{font-size:clamp(13px,1.1vw,15px);line-height:1.95;color:var(--muted);font-weight:300;max-width:460px;}
+
+  /* ---------- MOMENTS ---------- */
+  .moments{background:var(--ink);color:var(--paper);}
+  .moments .sec-num{color:#E08B76;}
+  .moments .sec-label{color:#8E887E;}
+  .moments .sec-title .en{color:#E08B76;font-family:var(--font-display-cn);font-style:normal;}
+  .mom-grid{display:grid;grid-template-columns:repeat(4,1fr);border-top:1px solid #3A3732;border-left:1px solid #3A3732;}
+  .moment{
+    border-right:1px solid #3A3732;border-bottom:1px solid #3A3732;
+    padding:clamp(24px,3vw,40px) clamp(18px,2vw,28px);
+    min-height:210px;display:flex;flex-direction:column;justify-content:space-between;
+    transition:background .3s;
+  }
+  .moment:hover{background:#24221E;}
+  .moment .mico{font-family:var(--font-mono);font-size:11px;color:#8E887E;letter-spacing:.1em;}
+  .moment .mcn{font-family:var(--font-display-cn);font-size:clamp(20px,2vw,27px);font-weight:500;margin-top:auto;}
+  .moment .men{font-family:var(--font-display-en);font-style:italic;font-size:14px;color:#8E887E;margin-top:6px;}
+
+  /* ---------- CTA ---------- */
+  .cta{text-align:center;padding:clamp(90px,13vw,170px) 0;}
+  .cta .over{font-family:var(--font-mono);font-size:10px;letter-spacing:.28em;color:var(--muted);text-transform:uppercase;}
+  .cta h2{
+    font-family:var(--font-display-en);font-style:italic;font-weight:400;
+    font-size:clamp(50px,9vw,132px);line-height:1.05;letter-spacing:-.02em;margin:26px 0 12px;
+  }
+  .cta h2 .cn{font-family:var(--font-display-cn);font-style:normal;font-weight:700;font-size:clamp(26px,3.6vw,48px);display:block;letter-spacing:.15em;margin-top:16px;}
+  .cta .under{font-family:var(--font-body-cn);color:var(--muted);font-size:clamp(13px,1.2vw,15px);font-weight:300;margin:26px 0 40px;}
+  .cta .btn{margin:0 auto;}
+
+  /* ---------- FOOTER ---------- */
+  footer{border-top:1px solid var(--ink);padding:44px 0 60px;}
+  .foot-in{display:flex;justify-content:space-between;align-items:flex-end;flex-wrap:wrap;gap:30px;}
+  .foot-brand .mark{font-family:var(--font-display-en);font-style:italic;font-size:26px;font-weight:600;}
+  .foot-brand .cn{font-family:var(--font-display-cn);font-size:13px;letter-spacing:.16em;margin-top:8px;color:var(--muted);}
+  .foot-links{display:flex;gap:30px;font-family:var(--font-mono);font-size:10px;letter-spacing:.08em;}
+  .foot-links a{color:var(--muted);text-decoration:none;}
+  .foot-links a:hover{color:var(--accent);}
+  .foot-copy{font-family:var(--font-mono);font-size:9px;color:var(--muted);letter-spacing:.05em;line-height:1.8;}
+
+  /* ---------- REVEAL ---------- */
+  .reveal{opacity:0;transform:translateY(22px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1);}
+  .reveal.in{opacity:1;transform:none;}
+
+  /* ---------- RESPONSIVE ---------- */
+  @media(max-width:900px){
+    .hero-grid,.philo-grid{grid-template-columns:1fr;}
+    .hero-visual{min-height:380px;margin-top:20px;}
+    .feature{grid-template-columns:60px 1fr;gap:18px;}
+    .feature p{grid-column:2;}
+    .mom-grid{grid-template-columns:repeat(2,1fr);}
+  }
+  @media(max-width:600px){
+    .nav-links a:not(.nav-cta){display:none;}
+    .hero h1{font-size:clamp(64px,20vw,110px);}
+    .mom-grid{grid-template-columns:1fr;}
+    .seal{width:70px;height:70px;}
+    .seal span{font-size:20px;}
+  }
+</style>
+</head>
+<body>
+
+<nav>
+  <div class="wrap nav-in">
+    <a href="#top" class="brand">
+      <span class="mark">Money to Tip</span><span class="dot"></span>
+      <span class="cn">忙里偷题</span>
+    </a>
+    <div class="nav-links">
+      <a href="#idea"><span class="idx">01</span>理念</a>
+      <a href="#feature"><span class="idx">02</span>功能</a>
+      <a href="#moment"><span class="idx">03</span>场景</a>
+      <a href="#start" class="nav-cta">开始刷题 ↗</a>
+    </div>
+  </div>
+</nav>
+
+<header id="top" class="hero wrap">
+  <div class="eyebrow"><span class="bar"></span>A Pocket-Sized Question Bank &nbsp;/&nbsp; 碎片时间刷题计划</div>
+  <div class="hero-grid">
+    <div class="hero-copy">
+      <h1>
+        <span class="line">忙里</span>
+        <span class="line"><span class="steal">偷</span>题</span>
+      </h1>
+      <div class="en-title">Money <span class="to">to</span> Tip</div>
+      <div class="slogan"><span class="dash"></span>Small tips, big steps.</div>
+      <p class="desc">等车的三分钟，睡前的五分钟，开会的间隙。<br>那些被随手划走的片刻，刚好够做一道题。<br>不必正襟危坐，也不用专门腾出整块时间。</p>
+      <div class="hero-actions">
+        <a href="#start" class="btn">开始刷题 <span class="arrow">→</span></a>
+        <span class="btn-note">FREE · NO SIGN-UP</span>
+      </div>
+    </div>
+
+    <div class="hero-visual">
+      <div class="card back b1"></div>
+      <div class="card back b2"></div>
+      <div class="card front">
+        <div class="card-top"><span class="qnum">QUESTION / 001</span><span>30 SEC · 通识</span></div>
+        <div class="card-q">“Serendipity” 最接近下列哪个意思？</div>
+        <div class="opt"><span class="key">A</span>按部就班的计划</div>
+        <div class="opt"><span class="key">B</span>不期而遇的美好</div>
+        <div class="opt right"><span class="key">C</span>意外发现珍宝的运气</div>
+        <div class="opt"><span class="key">D</span>深思熟虑的决定</div>
+        <div class="card-foot"><span>✓ 已掌握</span><span>NEXT →</span></div>
+      </div>
+      <div class="seal"><span>忙里偷题</span></div>
+    </div>
+  </div>
+</header>
+
+<div class="marquee">
+  <div class="marquee-track">
+    <span>Small tips, big steps.<i>✳</i></span><span>忙 里 偷 题<i>✳</i></span><span>Money to Tip<i>✳</i></span><span>碎片时间，攒成底气<i>✳</i></span>
+    <span>Small tips, big steps.<i>✳</i></span><span>忙 里 偷 题<i>✳</i></span><span>Money to Tip<i>✳</i></span><span>碎片时间，攒成底气<i>✳</i></span>
+  </div>
+</div>
+
+<section id="idea" class="wrap">
+  <div class="sec-head reveal">
+    <div class="sec-num">01 /</div>
+    <div>
+      <div class="sec-label">The Idea · 理念</div>
+      <div class="sec-title">把碎片，<em>攒成</em>底气。</div>
+    </div>
+  </div>
+  <div class="philo-grid">
+    <div class="philo-lead reveal">学习不该只发生在<span class="u">书桌前</span>。<br>它也可以发生在<span class="u">地铁上</span>、<br>排队时、临睡前的那一分钟。</div>
+    <div class="philo-body reveal">
+      <p>我们总在等一个"合适的时间"——等有空了、等状态好了、等把手头的事忙完。可那一天往往不来。真正能坚持的，从来不是宏大的计划，而是随手就能做的一点点。</p>
+      <p>忙里偷题，就是把那些原本被浪费的缝隙，变成一道题的时间。不给自己压力，也不放过任何一点进步的可能。</p>
+      <div class="big-en">A little, often, adds up.</div>
+      <p>一点点，常常做，就会累积起来。这就是我们相信的全部。</p>
+    </div>
+  </div>
+</section>
+
+<section id="feature" class="wrap" style="padding-top:0;">
+  <div class="sec-head reveal">
+    <div class="sec-num">02 /</div>
+    <div>
+      <div class="sec-label">What It Does · 功能</div>
+      <div class="sec-title">为"没时间"而设计。</div>
+    </div>
+  </div>
+  <div class="features">
+    <div class="feature reveal">
+      <div class="fnum">01</div>
+      <h3>随手就刷<span class="en">Open &amp; Answer</span></h3>
+      <p>打开即答，一道题几十秒到两分钟。没有冗长的引导，没有复杂的设置。碎片时间有多短，它就多轻。</p>
+    </div>
+    <div class="feature reveal">
+      <div class="fnum">02</div>
+      <h3>定制题库<span class="en">Your Own Deck</span></h3>
+      <p>导入一份文档、粘贴一段笔记，或者直接告诉它你想学什么。专属题库由你定义，从专业概念到行业黑话，想记的都能变成题。</p>
+    </div>
+    <div class="feature reveal">
+      <div class="fnum">03<span class="ftag">1885</span></div>
+      <h3>科学复习<span class="en">Ebbinghaus Curve</span></h3>
+      <p>遗忘先快后慢，这是艾宾浩斯在 1885 年画下的曲线。我们把它变成复习节奏——在快要忘记的临界点，把题重新送到你眼前。记得牢，不用靠运气。</p>
+    </div>
+    <div class="feature reveal">
+      <div class="fnum">04</div>
+      <h3>AI 助手<span class="en">Ask &amp; Learn</span></h3>
+      <p>答错了，不用自己去翻答案。AI 助手就地讲明白，还能顺着这道题继续追问、举例、出同类题。像有个耐心的老师，随时在线。</p>
+    </div>
+    <div class="feature reveal">
+      <div class="fnum">05</div>
+      <h3>越刷越懂你<span class="en">Gets You Better</span></h3>
+      <p>做得顺的悄悄退后，常错的排到前面。它记得你的薄弱处，也知道你什么时候在进步。时间花在刀刃上，而不是平均用力。</p>
+    </div>
+  </div>
+</section>
+
+<section id="moment" class="moments">
+  <div class="wrap">
+    <div class="sec-head reveal">
+      <div class="sec-num">03 /</div>
+      <div>
+        <div class="sec-label">Little Moments · 场景</div>
+        <div class="sec-title">时间藏在<em class="en">缝隙</em>里。</div>
+      </div>
+    </div>
+    <div class="mom-grid reveal">
+      <div class="moment"><div class="mico">01 — MORNING</div><div><div class="mcn">通勤路上</div><div class="men">On the move</div></div></div>
+      <div class="moment"><div class="mico">02 — WAITING</div><div><div class="mcn">排队等待</div><div class="men">In the queue</div></div></div>
+      <div class="moment"><div class="mico">03 — BREAK</div><div><div class="mcn">会议间隙</div><div class="men">Between meetings</div></div></div>
+      <div class="moment"><div class="mico">04 — NIGHT</div><div><div class="mcn">睡前片刻</div><div class="men">Before sleep</div></div></div>
+    </div>
+  </div>
+</section>
+
+<section id="start" class="cta wrap">
+  <div class="over reveal">Ready when you are</div>
+  <h2 class="reveal">Small tips,<br>big steps.<span class="cn">忙里偷题</span></h2>
+  <p class="under reveal">从今天的一道小题开始。</p>
+  <div class="reveal"><a href="#top" class="btn">开始刷题 <span class="arrow">→</span></a></div>
+</section>
+
+<footer>
+  <div class="wrap foot-in">
+    <div class="foot-brand">
+      <div class="mark">Money to Tip</div>
+      <div class="cn">忙里偷题 · Small tips, big steps.</div>
+    </div>
+    <div class="foot-links">
+      <a href="#idea">理念</a><a href="#feature">功能</a><a href="#moment">场景</a><a href="#top">回到顶部 ↑</a>
+    </div>
+    <div class="foot-copy">© 2026 MONEY TO TIP<br>MADE FOR THE IN-BETWEEN MOMENTS</div>
+  </div>
+</footer>
+
+<script>
+  const io = new IntersectionObserver((entries)=>{
+    entries.forEach(e=>{ if(e.isIntersecting){ e.target.classList.add('in'); io.unobserve(e.target);} });
+  },{threshold:.12});
+  document.querySelectorAll('.reveal').forEach((el,i)=>{
+    el.style.transitionDelay=(i%4*60)+'ms';
+    io.observe(el);
+  });
+</script>
+</body>
+</html>

@@ -1,0 +1,13 @@
+# 构建上下文瘦身（前端在镜像内重新构建，宿主机产物不入包）
+**/node_modules
+**/dist
+**/.venv
+**/__pycache__
+**/.pytest_cache
+**/.git
+moneyToTip/data
+data
+**/*.db
+**/.env
+**/*.tsbuildinfo
+**/.DS_Store
