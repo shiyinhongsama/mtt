@@ -1,100 +1,272 @@
-# 忙里偷题 · Money to Tip
+<div align="center">
 
-> Small tips, big steps.
+# 🧠 忙里偷题
 
-碎片时间刷题应用：任意材料 → 可溯源的题 → 科学复习排期 → 答错就地讲明白。
-需求与设计决策见知识库 `知识库/想法/刷题APP/`（想法.md / 头脑风暴.md / 需求.md）。
+### Money to Tip · Small tips, big steps.
 
-## 目录结构
+**把碎片时间，变成真正记得住的知识。**
 
-| 子目录 | 说明 | 技术栈 |
-|---|---|---|
-| `moneyToTip/` | 服务端 + 管理 CLI + 产品主页 | Python · FastAPI · SQLModel (SQLite) · Typer |
-| `moneyToTipApp/` | App 端（复习端，PWA） | React 18 · TypeScript · Vite · vite-plugin-pwa |
-| `moneyToTipConsole/` | 管理端（后台） | React 18 · TypeScript · Vite · Ant Design 5 |
+任意材料 → 可溯源的题 → 艾宾浩斯科学复习 → 答错就地讲明白
 
-三个子目录各自是独立 git 仓库；本目录只做组织，不是仓库。
+[![Python](https://img.shields.io/badge/Python-3.12%2B-3776AB?style=for-the-badge&logo=python&logoColor=white)](https://www.python.org/)
+[![FastAPI](https://img.shields.io/badge/FastAPI-Backend-009688?style=for-the-badge&logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
+[![React](https://img.shields.io/badge/React-18-61DAFB?style=for-the-badge&logo=react&logoColor=20232a)](https://react.dev/)
+[![PWA](https://img.shields.io/badge/PWA-Self--hosted-5A0FC8?style=for-the-badge&logo=pwa&logoColor=white)](https://web.dev/learn/pwa/)
+[![SQLite](https://img.shields.io/badge/SQLite-Your_data-003B57?style=for-the-badge&logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 
-## 快速开始
+[核心能力](#-核心能力) · [记忆引擎](#-可解释的记忆引擎) · [快速启动](#-快速启动) · [项目架构](#-项目架构) · [路线图](#-路线图)
 
-```bash
-# 1. 服务端（API + 产品主页，端口 8000）
-cd moneyToTip
-uv sync
-mtt init-db
-mtt user-create shiyinhong --admin --password <密码>   # 输出口令与 API token
-mtt serve                    # → http://localhost:8000
+</div>
 
-# 2. App 端（复习端，端口 8001）
-cd ../moneyToTipApp
-npm install
-npm run build
-npx vite preview --host      # → http://localhost:8001/app/
-# 开发热更新：npm run dev（5173）
+---
 
-# 3. 管理端（后台，端口 8002）
-cd ../moneyToTipConsole
-npm install
-npm run build
-npx vite preview --host      # → http://localhost:8002/console/
-# 开发热更新：npm run dev（5174）
+> [!IMPORTANT]
+> **当前状态**：可靠复习 API、分钟级排期、个性化记忆状态、旧库迁移和数据兼容已完成；移动端核心体验与首次引导重设计已列入[实施计划](docs/superpowers/plans/2026-11-25-memory-experience-redesign.md)。README 只描述当前已经落地的主流程。
+
+## ✨ 为什么是忙里偷题
+
+<table>
+<tr>
+<td width="25%">
+
+### 🎯 学得快
+打开即是一道题。选择题、填空、判断、问答与场景设计统一进入流畅的复习队列。
+
+</td>
+<td width="25%">
+
+### 🧠 记得住
+每道题独立记忆稳定性，四档评分驱动下一次出现时间；答错进入 10 分钟重学。
+
+</td>
+<td width="25%">
+
+### 🔎 讲得透
+答案、讲解、出处一体呈现；需要时调用自己的模型讲题，并生成同类变式题。
+
+</td>
+<td width="25%">
+
+### 🔐 拿得走
+自部署、SQLite、每日备份、完整导入导出。学习数据始终由你掌握。
+
+</td>
+</tr>
+</table>
+
+```mermaid
+flowchart LR
+    A[📄 学习材料] --> B[🗂️ 可溯源题库]
+    B --> C[⏰ 到期队列]
+    C --> D[✍️ 主动回忆]
+    D --> E{四档自评}
+    E -->|忘记| F[🔁 10 分钟重学]
+    E -->|困难 / 记得 / 轻松| G[📈 更新记忆稳定性]
+    F --> C
+    G --> H[🧭 计算下次复习]
+    H --> C
+    D --> I[🤖 可选 AI 讲题]
+    I -. 不改变排期 .-> D
 ```
 
-服务端会自动探测兄弟目录的 `dist/` 并托管：`/app/`（App 端）与 `/console/`（管理端），
-所以 8000 一个端口也能用；`MTT_WEBAPP_DIST` / `MTT_CONSOLE_DIST` 可显式指定。
+## 🚀 核心能力
 
-## 模型配置（BYOK）
+| 能力 | 已实现体验 |
+|---|---|
+| **题库管理** | 题库 → `::` 层级分类 → 五种题型；Markdown 内容、标签、难度、来源与状态 |
+| **专注刷题** | 到期题优先、新题补足、答题计时、四档自评、训练计划、每日目标与加练 |
+| **科学复习** | 指数遗忘近似、目标保持率 `0.85`、分钟级 `due_at`、个性化稳定性、短时重学 |
+| **可靠记录** | `client_id` 幂等回写、事务提交、决策快照、唯一用户题目状态 |
+| **AI 辅助** | 手动问 AI、三类追问、同类变式题；求助单独记日志，不影响排期 |
+| **学习统计** | 成熟题、今日到期、今日已答、30 天热力图、分类掌握与未来体验扩展基础 |
+| **Anki 迁移** | `.apkg`（anki21 / anki21b）与 TSV 导入、牌组层级转分类、导入报告 |
+| **数据主权** | 每日自动备份、版本化完整导出、旧版导入适配、数据清空 |
+| **多用户隔离** | 管理员 / 普通用户、多设备令牌、吊销、按用户隔离题目与学习记录 |
+| **一体部署** | 一个 Docker 容器同时提供产品主页、学习 PWA、管理后台和 API |
 
-App 端「问 AI」与 AI 变式题需要模型 Key，写入 `moneyToTip/.env`（已 gitignore）：
+## 🧮 可解释的记忆引擎
+
+忙里偷题以艾宾浩斯遗忘规律为启发，用透明的指数模型近似记忆随时间的变化：
+
+```text
+R(t) = exp(-t / S)
+
+R：经过时间 t 后的预计保持率
+S：当前用户对这道题的记忆稳定性（天）
+```
+
+默认目标保持率为 **0.85**，下一次复习间隔为：
+
+```text
+interval = -S × ln(0.85)
+```
+
+每次回答都会更新这道题的个人稳定性，而不是套用所有人的固定日历：
+
+| 评分 | 你的感受 | 对排期的影响 |
+|---|---|---|
+| `again` | 没有回忆起来 | 降低稳定性，10 分钟后重学，并回到本次会话 |
+| `hard` | 回忆困难 | 小幅增加稳定性，间隔不短于当前间隔 |
+| `good` | 正常回忆 | 稳定性 × 2.0，按目标保持率重新排期 |
+| `easy` | 轻松回忆 | 稳定性 × 2.8，拉长下一次出现时间 |
+
+安全边界为 **10 分钟～365 天**。每次提交保存算法版本与决策快照，因此历史排期可以解释、重放和迁移。
+
+> [!NOTE]
+> 这是一种可解释的工程近似，不承诺“保证记住”。后续统计会区分**模型预测**与来自真实复习日志的**实际保持率**。
+
+## ⚡ 快速启动
+
+### 方式一：Docker，一条命令跑完整产品
 
 ```bash
-MTT_MODEL_API_KEY=sk-...
-MTT_MODEL_BASE_URL=https://api.minimaxi.com/v1   # OpenAI 兼容接口
+git clone https://github.com/shiyinhongsama/mtt.git
+cd mtt
+docker compose up -d --build
+```
+
+创建管理员并获取初始凭证：
+
+```bash
+docker compose exec moneytotip uv run mtt user-create admin --admin
+```
+
+| 入口 | 地址 | 当前登录方式 |
+|---|---|---|
+| 🏠 产品主页 | http://localhost:8000/ | 无需登录 |
+| 📱 学习 PWA | http://localhost:8000/app/ | API token |
+| 🛠️ 管理后台 | http://localhost:8000/console/ | 管理员账号密码 |
+| ❤️ 健康检查 | http://localhost:8000/health | 无需登录 |
+
+数据持久化在 Docker 卷 `mt-data`；删除容器不会删除学习数据。停止与恢复：
+
+```bash
+docker compose down
+docker compose up -d
+```
+
+### 方式二：本地开发
+
+<details open>
+<summary><b>① 启动后端 · 8000</b></summary>
+
+```bash
+cd moneyToTip
+uv sync --frozen
+uv run mtt init-db
+uv run mtt user-create admin --admin --password '<local-only-password>'
+uv run mtt serve
+```
+
+</details>
+
+<details>
+<summary><b>② 启动学习 PWA · 5173</b></summary>
+
+```bash
+cd moneyToTipApp
+npm ci
+npm run dev
+```
+
+开发服务器将 `/api` 代理到 `127.0.0.1:8000`。
+
+</details>
+
+<details>
+<summary><b>③ 启动管理后台 · 5174</b></summary>
+
+```bash
+cd moneyToTipConsole
+npm ci
+npm run dev
+```
+
+</details>
+
+构建后的 `dist/` 也可由 FastAPI 自动托管：学习端 `/app/`，管理端 `/console/`。需要自定义路径时使用 `MTT_WEBAPP_DIST` 与 `MTT_CONSOLE_DIST`。
+
+## 🤖 模型配置 · BYOK
+
+AI 讲题使用 OpenAI 兼容接口。没有模型 Key 时，题库、复习、排期、统计和备份仍可正常使用。
+
+在根目录创建 `.env`（Docker Compose 读取）：
+
+```bash
+MTT_MODEL_API_KEY=sk-your-local-key
+MTT_MODEL_BASE_URL=https://api.minimaxi.com/v1
 MTT_MODEL_NAME=MiniMax-M3.1-Flash
 ```
 
-## 功能地图
+`.env` 已被 Git 忽略。不要把真实 Key、token、数据库或备份提交到仓库。
 
-- **题库**：题库（名称+备注）→ 分类树（`::` 层级）→ 题目（选择/填空/判断/问答/场景设计，Markdown）
-- **刷题**：打开即答、四档自评、答题计时、按题库/分类/训练计划筛选、每日目标 + 加练
-- **问 AI**：答错手动拉起讲题对话框，三类追问 + 同类变式题（可一键入库），求助记日志不改排期
-- **复习引擎**：基于指数遗忘近似的个性化排期（目标保持率 0.85）、10 分钟重学、分钟级评分预览、全量 review log、并发幂等回写
-- **数据主权**：每日自动备份、全量导出/再导入（可重放）、数据清空
-- **账户**：管理员/普通用户、多令牌（掩码+复制+吊销）、数据隔离
-- **Anki**：.apkg（anki21/anki21b）与 TSV 导入、牌组层级转分类、进度粗略迁移、导入报告
-- **管理端**：仪表盘、题库/分类/账户/数据/Anki 五页，响应式布局
+## 🏗️ 项目架构
 
-## 测试
-
-```bash
-cd moneyToTip && uv run pytest    # 服务端接口与领域逻辑
+```text
+mtt/
+├── moneyToTip/              # FastAPI · SQLModel · SQLite · Alembic · Typer
+│   ├── mtt/identity/        # 用户、令牌、登录
+│   ├── mtt/corpus/          # 题库、分类、题目
+│   ├── mtt/schedule/        # 记忆引擎、到期队列、训练计划
+│   ├── mtt/growth/          # 学习统计
+│   ├── mtt/data/            # 备份、导入、导出
+│   └── tests/               # 领域、接口、并发与迁移测试
+├── moneyToTipApp/           # React 学习 PWA
+├── moneyToTipConsole/       # Ant Design 管理后台
+├── docs/superpowers/        # 产品设计与实施计划
+└── docker-compose.yml       # All-in-One 部署
 ```
 
-## Docker（推荐部署方式）
+这是一个**单 Git 仓库的三应用 monorepo**，不是三个嵌套仓库。贡献约定与安全边界见 [AGENTS.md](AGENTS.md)。
 
-All-in-One 镜像：多阶段构建（前端 ×2 + Python 运行时），单容器提供全部入口。
-
-```bash
-cd mtt/                          # 本目录
-cp moneyToTip/.env .env          # 模型 BYOK（可选，不配则「问 AI」不可用）
-docker compose up -d --build     # 构建并启动
-docker compose logs -f           # 看日志
-```
-
-| 入口 | 地址 |
-|---|---|
-| 产品主页 | http://localhost:8000/ |
-| App 端（复习端 PWA） | http://localhost:8000/app/ |
-| 管理端（后台） | http://localhost:8000/console/ |
+## ✅ 测试与验证
 
 ```bash
-# 常用维护（在容器里执行 mtt 命令）
-docker compose exec moneytotip uv run mtt user-create shiyinhong --admin   # 建管理员
-docker compose exec moneytotip uv run mtt question-import /app/data/x.json # 批量导题
-docker compose down              # 停止（数据保留在卷 mt-data 里）
+# 后端：领域逻辑、API、并发幂等、每日进度、迁移与数据兼容
+cd moneyToTip
+uv run --frozen pytest -q
+
+# 学习端：TypeScript 与 PWA 生产构建
+cd ../moneyToTipApp
+npm ci
+npm run build
+
+# 管理端：TypeScript 与生产构建
+cd ../moneyToTipConsole
+npm ci
+npm run build
 ```
 
-说明：
-- 数据持久化在卷 `mt-data`（sqlite 库 + 每日自动备份），删容器不丢数据
-- 时区固定 `Asia/Shanghai`（"今日"口径）；以非 root 用户运行；带健康检查
-- 模型 Key 通过 compose 的 `.env`（`MTT_MODEL_API_KEY` 等）注入，不进镜像
+前端组件测试、核心 E2E 与 360 / 768 / 1440px 视觉回归属于下一阶段验收门禁，完成前不宣称已覆盖。
+
+## 🗺️ 路线图
+
+- [x] 题库、训练计划、AI 讲题、统计、管理后台骨架
+- [x] 可靠复习提交与并发幂等
+- [x] 艾宾浩斯启发式记忆引擎与分钟级评分预览
+- [x] Alembic 版本化迁移与新旧导出兼容
+- [x] 每日目标按不同题目准确计数
+- [ ] 可恢复的复习会话状态机与专注复习页
+- [ ] 移动端设计系统、今日、题库与记忆洞察重设计
+- [ ] 普通用户账号登录、首次引导与示例题
+- [ ] 核心 E2E、弱网恢复与多视口视觉回归
+- [ ] 核心体验稳定后，再闭合 Markdown / AI 出题内容供应链
+
+详细任务、接口、测试和提交检查点见[体验重设计实施计划](docs/superpowers/plans/2026-11-25-memory-experience-redesign.md)。
+
+## 📚 设计与协作文档
+
+- [科学记忆引擎与核心体验重设计](docs/superpowers/specs/2026-11-25-memory-experience-redesign-design.md)
+- [可靠复习与记忆引擎实施计划](docs/superpowers/plans/2026-11-25-reliable-memory-engine.md)
+- [核心体验重设计实施计划](docs/superpowers/plans/2026-11-25-memory-experience-redesign.md)
+- [仓库协作指南](AGENTS.md)
+
+---
+
+<div align="center">
+
+**少一点遗忘，多一点确定。**
+
+🧠 忙里偷题 · Small tips, big steps.
+
+</div>
