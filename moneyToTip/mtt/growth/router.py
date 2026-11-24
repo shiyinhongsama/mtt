@@ -1,6 +1,6 @@
 """growth 接口：北极星指标、热力图（R-growth-03）、分类掌握度（R-growth-04 前置）。"""
 
-from datetime import date, timedelta
+from datetime import date, datetime, timedelta
 
 from fastapi import APIRouter, Depends
 from sqlmodel import Session, func, select
@@ -10,28 +10,34 @@ from mtt.db import get_session
 from mtt.deps import get_current_user
 from mtt.identity.models import User
 from mtt.schedule.models import QuestionState, ReviewLog
-from mtt.timeutil import local_day_start_utc
+from mtt.timeutil import local_day_start_utc, utcnow
 
 router = APIRouter(prefix="/stats", tags=["growth"])
+
+
+def _is_mature():
+    return ((QuestionState.status == "review") &
+            (QuestionState.interval_minutes >= 21 * 1440))
 
 
 @router.get("")
 def stats(user: User = Depends(get_current_user),
           session: Session = Depends(get_session)) -> dict:
     today = date.today()
+    now = utcnow()
 
     mature = session.exec(
         select(func.count())
         .select_from(QuestionState)
-        .where(QuestionState.user_id == user.id, QuestionState.status == "mastered")
+        .where(QuestionState.user_id == user.id, _is_mature())
     ).one()
 
     due_states = session.exec(
         select(func.count())
         .select_from(QuestionState)
-        .where(QuestionState.user_id == user.id, QuestionState.due_date <= today)
+        .where(QuestionState.user_id == user.id, QuestionState.due_at <= now)
     ).one()
-    # 从未复习过的 active 新题视为今天到期（与 /reviews/due 口径一致）
+    # 从未复习过的 active 新题视为现在到期（与 /reviews/due 口径一致）
     new_active = session.exec(
         select(func.count()).select_from(Question)
         .where(Question.owner_id == user.id, Question.status == "active",
@@ -62,14 +68,14 @@ def stats(user: User = Depends(get_current_user),
     ).all()
 
     return {
-        "mature_count": mature,            # 成熟知识量（北极星）
-        "due_today": due_today,            # 今日待复习
-        "reviewed_today": reviewed_today,  # 今日已答
+        "mature_count": mature,
+        "due_today": due_today,
+        "reviewed_today": reviewed_today,
         "active_questions": active_questions,
         "status_counts": {s: n for s, n in status_rows},
-        "by_bank": _by_bank(session, user, today),
+        "by_bank": _by_bank(session, user, now),
         "heatmap": _heatmap(session, user, today),
-        "by_category": _by_category(session, user, today),
+        "by_category": _by_category(session, user, now),
     }
 
 
@@ -84,15 +90,15 @@ def _heatmap(session: Session, user: User, today: date) -> list[dict]:
     ).all()
     counts: dict[str, int] = {}
     for ts in stamps:
-        key = ts.astimezone().date().isoformat()  # 本地日期
+        key = ts.astimezone().date().isoformat()
         counts[key] = counts.get(key, 0) + 1
     return [{"date": str(today - timedelta(days=i)),
              "count": counts.get(str(today - timedelta(days=i)), 0)}
             for i in range(29, -1, -1)]
 
 
-def _by_bank(session: Session, user: User, today: date) -> list[dict]:
-    """每个题库：在库题目数 / 已掌握 / 今日待复习。"""
+def _by_bank(session: Session, user: User, now: datetime) -> list[dict]:
+    """每个题库：在库题目数 / 已掌握 / 当前待复习。"""
     banks = {b.id: b.name for b in
              session.exec(select(QuestionBank).where(QuestionBank.owner_id == user.id)).all()}
 
@@ -110,10 +116,9 @@ def _by_bank(session: Session, user: User, today: date) -> list[dict]:
         select(Question.bank_id, func.count())
         .where(Question.owner_id == user.id, Question.status == "active")
         .group_by(Question.bank_id)).all()}
-    mature = group(QuestionState.status == "mastered")
-    due = group(QuestionState.due_date <= today)
+    mature = group(_is_mature())
+    due = group(QuestionState.due_at <= now)
 
-    # 从未复习的新题计入今日待复习（与 due_today 口径一致）
     new_due = {bid: n for bid, n in session.exec(
         select(Question.bank_id, func.count())
         .where(Question.owner_id == user.id, Question.status == "active",
@@ -133,8 +138,8 @@ def _by_bank(session: Session, user: User, today: date) -> list[dict]:
     return out
 
 
-def _by_category(session: Session, user: User, today: date) -> list[dict]:
-    """每个分类的直接题目数 / 已掌握 / 今日待复习；未分类单独一桶。"""
+def _by_category(session: Session, user: User, now: datetime) -> list[dict]:
+    """每个分类的直接题目数 / 已掌握 / 当前待复习；未分类单独一桶。"""
     cat_names = {c.id: c.name for c in
                  session.exec(select(Category).where(Category.owner_id == user.id)).all()}
 
@@ -150,15 +155,14 @@ def _by_category(session: Session, user: User, today: date) -> list[dict]:
         select(Question.category_id, func.count())
         .select_from(QuestionState)
         .join(Question, Question.id == QuestionState.question_id)
-        .where(QuestionState.user_id == user.id, QuestionState.status == "mastered",
-               Question.status == "active")
+        .where(QuestionState.user_id == user.id, _is_mature(), Question.status == "active")
         .group_by(Question.category_id)).all())
 
     due = bucket_rows(session.exec(
         select(Question.category_id, func.count())
         .select_from(QuestionState)
         .join(Question, Question.id == QuestionState.question_id)
-        .where(QuestionState.user_id == user.id, QuestionState.due_date <= today,
+        .where(QuestionState.user_id == user.id, QuestionState.due_at <= now,
                Question.status == "active")
         .group_by(Question.category_id)).all())
 
@@ -172,7 +176,6 @@ def _by_category(session: Session, user: User, today: date) -> list[dict]:
             "mature": mature.get(cid, 0),
             "due": due.get(cid, 0),
         })
-    # 未复习过的新题也算今日待复习（与 due_today 口径一致）
     new_due = session.exec(
         select(Question.category_id, func.count())
         .where(Question.owner_id == user.id, Question.status == "active",

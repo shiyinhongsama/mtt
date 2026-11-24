@@ -1,9 +1,10 @@
 """schedule 接口：拉取到期题（R-api-01）、回写作答（R-api-02）。"""
 
-from datetime import UTC, date, datetime
+from datetime import UTC, datetime
 
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Query
 from pydantic import BaseModel, Field
+from sqlalchemy import and_, or_
 from sqlalchemy.exc import IntegrityError
 from sqlmodel import Session, select
 
@@ -12,7 +13,7 @@ from mtt.corpus.service import to_dict
 from mtt.db import get_session
 from mtt.deps import get_current_user
 from mtt.identity.models import User
-from mtt.schedule.memory import MemoryDecision, MemorySnapshot, Rating, decide
+from mtt.schedule.memory import MemoryDecision, MemorySnapshot, Rating, decide, preview
 from mtt.schedule.models import Plan, QuestionState, ReviewLog
 from mtt.timeutil import utcnow
 
@@ -53,16 +54,13 @@ class ReviewSubmit(BaseModel):
 
 
 @router.get("/due")
-def due_questions(limit: int = 20, category_id: int | None = None,
+def due_questions(limit: int = Query(default=20, ge=1, le=100),
+                  category_id: int | None = None,
                   bank_id: int | None = None,
                   user: User = Depends(get_current_user),
                   session: Session = Depends(get_session)) -> list[dict]:
-    """只出现"已到期"的题，不硬塞题（R-schedule-07）。
-
-    已复习过的题按 QuestionState.due_date；从未复习过的 active 新题视为今天到期。
-    category_id 含全部后代分类；bank_id 精确匹配题库。筛选只是队列开关，不是前置门槛。
-    """
-    today = date.today()
+    """按分钟返回到期题，新题在已到期题之后补足队列容量。"""
+    now = utcnow()
     category_filter = None
     if category_id is not None:
         root = session.get(Category, category_id)
@@ -71,50 +69,44 @@ def due_questions(limit: int = 20, category_id: int | None = None,
         category_filter = _descendant_category_ids(session, user, category_id)
 
     stmt = (
-        select(QuestionState, Question)
-        .join(Question, Question.id == QuestionState.question_id)
-        .where(
+        select(Question, QuestionState)
+        .outerjoin(QuestionState, and_(
+            QuestionState.question_id == Question.id,
             QuestionState.user_id == user.id,
-            QuestionState.due_date <= today,
+        ))
+        .where(
+            Question.owner_id == user.id,
             Question.status == "active",
+            or_(QuestionState.due_at <= now, QuestionState.id.is_(None)),
         )
     )
     if category_filter is not None:
         stmt = stmt.where(Question.category_id.in_(category_filter))
     if bank_id is not None:
         stmt = stmt.where(Question.bank_id == bank_id)
-    results = list(session.exec(stmt.limit(limit)).all())
-
-    if len(results) < limit:
-        reviewed_ids = {q.id for _, q in results}
-        stmt = select(Question).where(
-            Question.owner_id == user.id, Question.status == "active")
-        if category_filter is not None:
-            stmt = stmt.where(Question.category_id.in_(category_filter))
-        if bank_id is not None:
-            stmt = stmt.where(Question.bank_id == bank_id)
-        for q in session.exec(stmt.limit(limit * 10)).all():
-            if len(results) >= limit:
-                break
-            if q.id in reviewed_ids:
-                continue
-            state = session.exec(
-                select(QuestionState).where(
-                    QuestionState.user_id == user.id,
-                    QuestionState.question_id == q.id,
-                )
-            ).first()
-            if state is None:
-                results.append((None, q))
+    results = session.exec(
+        stmt.order_by(QuestionState.id.is_(None), QuestionState.due_at.asc(), Question.id.asc())
+        .limit(limit)
+    ).all()
 
     out = []
-    for state, question in results:
+    for question, state in results:
         item = to_dict(question)
         status = state.status if state else "new"
+        label = ("已掌握" if state and status == "review" and
+                 state.interval_minutes >= 21 * 1440 else STATUS_LABELS[status])
         item["state"] = {
             "status": status,
-            "label": STATUS_LABELS[status],
+            "label": label,
+            "due_at": _as_utc(state.due_at) if state else None,
         }
+        snapshot = MemorySnapshot(
+            reps=state.reps if state else 0,
+            lapses=state.lapses if state else 0,
+            stability_days=state.stability_days if state else 1.0,
+            interval_minutes=state.interval_minutes if state else 0,
+        )
+        item["rating_previews"] = preview(snapshot, now)
         out.append(item)
     return out
 
