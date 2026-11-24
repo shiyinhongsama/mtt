@@ -86,3 +86,73 @@ def test_wipe_keeps_account(client, auth, admin):
     client.request("DELETE", "/api/v1/data/wipe", headers=auth,
                    json={"confirm": "清空"})
     assert client.get("/api/v1/identity/me", headers=auth).status_code == 200
+
+
+def _review_export(client, auth, question_id: int, client_id: str) -> dict:
+    response = client.post("/api/v1/reviews", headers=auth, json={
+        "question_id": question_id, "client_id": client_id,
+        "correct": True, "rating": "good"})
+    assert response.status_code == 201
+    return client.get("/api/v1/data/export", headers=auth).json()
+
+
+def _wipe_import(client, auth, payload: dict) -> dict:
+    assert client.request("DELETE", "/api/v1/data/wipe", headers=auth,
+                          json={"confirm": "清空"}).status_code == 200
+    assert client.post("/api/v1/data/import", headers=auth, json=payload).status_code == 200
+    return client.get("/api/v1/data/export", headers=auth).json()
+
+
+def _restored_state(bundle: dict, stem: str) -> dict:
+    question = next(q for q in bundle["questions"] if q["stem"] == stem)
+    return next(s for s in bundle["states"] if s["question_id"] == question["id"])
+
+
+def test_version_one_state_is_adapted(client, auth, active_question):
+    from datetime import datetime
+
+    exported = _review_export(client, auth, active_question.id, "v1-adapt")
+    assert exported["version"] == 2
+    state = next(s for s in exported["states"] if s["question_id"] == active_question.id)
+    state["due_date"] = datetime.fromisoformat(state.pop("due_at")).date().isoformat()
+    state["interval_days"] = max(1, round(state.pop("interval_minutes") / 1440))
+    for field in ("stability_days", "lapses", "last_rating",
+                  "last_reviewed_at", "algorithm_version"):
+        state.pop(field)
+    exported["version"] = 1
+    restored = _wipe_import(client, auth, exported)
+    result = _restored_state(restored, active_question.stem)
+    assert result["interval_minutes"] == state["interval_days"] * 1440
+    assert result["stability_days"] > 0
+    assert result["due_at"] is not None
+    assert result["algorithm_version"] == "ebbinghaus-v1"
+
+
+def test_new_export_roundtrip_preserves_memory_state(client, auth, active_question):
+    exported = _review_export(client, auth, active_question.id, "v2-roundtrip")
+    expected = next(s for s in exported["states"] if s["question_id"] == active_question.id)
+    restored = _wipe_import(client, auth, exported)
+    actual = _restored_state(restored, active_question.stem)
+    for field in ("stability_days", "interval_minutes", "due_at", "lapses",
+                  "last_rating", "last_reviewed_at", "algorithm_version"):
+        assert actual[field] == expected[field]
+    expected_log = next(x for x in exported["review_logs"] if x["client_id"] == "v2-roundtrip")
+    actual_log = next(x for x in restored["review_logs"] if x["client_id"] == "v2-roundtrip")
+    for field in ("plan_id", "decision_due_at", "decision_interval_minutes",
+                  "decision_algorithm_version"):
+        assert actual_log[field] == expected_log[field]
+
+
+def test_review_log_plan_reference_is_remapped(client, auth, active_question):
+    plan = client.post("/api/v1/plans", headers=auth, json={
+        "name": "导出计划映射", "daily_goal": 5}).json()
+    response = client.post("/api/v1/reviews", headers=auth, json={
+        "question_id": active_question.id, "client_id": "plan-remap-log",
+        "correct": True, "rating": "good", "plan_id": plan["id"]})
+    assert response.status_code == 201
+    exported = client.get("/api/v1/data/export", headers=auth).json()
+    restored = _wipe_import(client, auth, exported)
+    restored_plan = next(p for p in restored["plans"] if p["name"] == "导出计划映射")
+    restored_log = next(x for x in restored["review_logs"]
+                        if x["client_id"] == "plan-remap-log")
+    assert restored_log["plan_id"] == restored_plan["id"]

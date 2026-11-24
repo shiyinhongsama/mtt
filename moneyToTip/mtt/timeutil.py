@@ -1,10 +1,15 @@
 """统一的带时区 UTC 时间（SQLAlchemy 2.x 要求 tz-aware）。"""
 
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, time, timedelta
 
 
 def utcnow() -> datetime:
     return datetime.now(UTC)
+
+
+def local_midnight_as_utc(day: date) -> datetime:
+    """将服务器本地某一天的零点转换为带时区的 UTC 时间。"""
+    return datetime.combine(day, time.min).astimezone().astimezone(UTC)
 
 
 def local_day_start_utc(day_offset: int = 0) -> datetime:
