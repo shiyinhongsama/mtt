@@ -12,7 +12,8 @@ import mtt.schedule.models  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:
-    fileConfig(config.config_file_name)
+    # 服务端启动时在进程内跑迁移；默认会禁用所有已有 logger，连 uvicorn 的访问日志和错误堆栈也被关掉
+    fileConfig(config.config_file_name, disable_existing_loggers=False)
 
 target_metadata = SQLModel.metadata
 
