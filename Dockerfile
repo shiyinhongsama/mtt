@@ -56,4 +56,5 @@ HEALTHCHECK --interval=30s --timeout=5s --start-period=15s \
   CMD python -c "import urllib.request;urllib.request.urlopen('http://127.0.0.1:8000/health')" || exit 1
 
 # 启动即建表/迁移/自动备份（mtt.main startup）
-CMD ["uv", "run", "uvicorn", "mtt.main:app", "--host", "0.0.0.0", "--port", "8000"]
+# --no-sync：依赖已在构建时锁定，否则 uv run 每次启动都会联网重装并把 dev 依赖带进容器
+CMD ["uv", "run", "--no-sync", "uvicorn", "mtt.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -10,8 +10,8 @@
 #   http://localhost:8000/console/  管理端（账号密码登录）
 #
 # 常用维护命令：
-#   docker compose exec moneytotip uv run mtt user-create shiyinhong --admin   # 建管理员
-#   docker compose exec moneytotip uv run mtt question-import /app/data/x.json # 导题（先把文件放进数据卷）
+#   docker compose exec moneytotip uv run --no-sync mtt user-create shiyinhong --admin   # 建管理员
+#   docker compose exec moneytotip uv run --no-sync mtt question-import /app/data/x.json # 导题（先把文件放进数据卷）
 #   docker compose down            # 停止（数据保留在卷里）
 #   docker compose up -d           # 再启动
 

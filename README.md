@@ -128,7 +128,7 @@ docker compose up -d --build
 创建管理员并获取初始凭证：
 
 ```bash
-docker compose exec moneytotip uv run mtt user-create admin --admin
+docker compose exec moneytotip uv run --no-sync mtt user-create admin --admin
 ```
 
 | 入口 | 地址 | 当前登录方式 |
