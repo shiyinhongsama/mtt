@@ -1,0 +1,19 @@
+.page {
+  width: min(100%, 720px);
+  min-height: 100dvh;
+  margin: 0 auto;
+  padding: 20px 18px calc(32px + var(--safe-bottom));
+}
+
+.header { display: grid; grid-template-columns: 44px 1fr auto; gap: 12px; align-items: center; margin-bottom: 24px; }
+.header div { display: flex; flex-direction: column; gap: 2px; }
+.header strong { font-family: var(--font-display); font-size: 21px; }
+.header span { color: var(--color-muted); font-size: 12px; }
+.exit { display: grid; place-items: center; width: 44px; height: 44px; color: var(--color-ink); font-size: 24px; text-decoration: none; }
+.count { padding: 5px 9px; border: 1px solid var(--color-line); border-radius: 99px; }
+.queueError { margin-bottom: 16px; padding: 12px; border-left: 3px solid var(--color-danger); color: var(--color-danger); font-size: 13px; }
+.queueError button { min-height: 44px; border: 0; background: transparent; color: inherit; text-decoration: underline; cursor: pointer; }
+
+@media (min-width: 768px) {
+  .page { padding-top: 36px; }
+}

@@ -20,6 +20,7 @@ export interface ReviewSessionState {
 }
 
 export type ReviewEvent =
+  | { type: "RESTORE"; state: ReviewSessionState }
   | { type: "QUEUE_LOADED"; queue: DueQuestion[]; planId: number | null; now?: number }
   | { type: "ANSWER_REVEALED"; answer: string }
   | { type: "RATE"; rating: Rating; clientId: string; now: number }
@@ -47,6 +48,15 @@ export function reviewReducer(
   event: ReviewEvent,
 ): ReviewSessionState {
   switch (event.type) {
+    case "RESTORE":
+      if (event.state.phase === "submitting") {
+        return {
+          ...event.state,
+          phase: "failed",
+          error: "连接中断，结果尚未保存",
+        };
+      }
+      return event.state;
     case "RESET":
       return initialReviewSession;
     case "QUEUE_LOADED":
