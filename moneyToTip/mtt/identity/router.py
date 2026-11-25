@@ -42,8 +42,9 @@ def me(user: User = Depends(get_current_user)) -> dict:
 @router.post("/login")
 def login(payload: LoginRequest,
           session: Session = Depends(get_session)) -> dict:
-    """管理端账号密码登录：签发 API token（仅管理员）。
+    """账号密码登录：为普通用户和管理员签发 API token。
 
+    管理端必须在自己的登录流程中额外校验 admin 角色。
     TODO(identity): 登录限流与失败锁定（v1 自用阶段先不做）。
     """
     user = session.exec(select(User).where(User.username == payload.username)).first()
@@ -51,8 +52,6 @@ def login(payload: LoginRequest,
         raise HTTPException(401, "用户名或密码不正确")
     if not user.is_active:
         raise HTTPException(403, "账户已被禁用")
-    if user.role != "admin":
-        raise HTTPException(403, "管理端仅管理员可登录")
     token = create_token(session, user)
     return {"token": token, "username": user.username, "role": user.role}
 

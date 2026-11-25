@@ -33,7 +33,7 @@ def test_admin_creates_user(client, auth):
 
 
 def test_console_login(client, auth):
-    """管理端账号密码登录。"""
+    """共享密码登录；管理权限仍由管理接口和管理端登录页共同校验。"""
     with Session(engine) as session:
         create_user(session, "boss", password="s3cret", role="admin")
         create_user(session, "pal", password="pw", role="user")
@@ -46,11 +46,17 @@ def test_console_login(client, auth):
     assert client.get("/api/v1/identity/users",
                       headers={"Authorization": f"Bearer {token}"}).status_code == 200
 
-    # 密码错误 / 普通用户 / 不存在
+    # 密码错误 / 不存在仍使用统一 401；普通用户可登录学习端，但不能访问管理接口。
     assert client.post("/api/v1/identity/login",
                        json={"username": "boss", "password": "wrong"}).status_code == 401
-    assert client.post("/api/v1/identity/login",
-                       json={"username": "pal", "password": "pw"}).status_code == 403
+    user_login = client.post("/api/v1/identity/login",
+                             json={"username": "pal", "password": "pw"})
+    assert user_login.status_code == 200
+    assert user_login.json()["role"] == "user"
+    assert client.get(
+        "/api/v1/identity/users",
+        headers={"Authorization": f"Bearer {user_login.json()['token']}"},
+    ).status_code == 403
     assert client.post("/api/v1/identity/login",
                        json={"username": "nobody", "password": "x"}).status_code == 401
 

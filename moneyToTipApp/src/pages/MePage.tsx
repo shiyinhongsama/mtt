@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { api, clearToken } from "../api/client";
 import type { ApiTokenInfo, Plan, Stats } from "../api/types";
+import Button from "../components/ui/Button";
+import Sheet from "../components/ui/Sheet";
+import { clearReviewSnapshot } from "../features/review/snapshot";
 
 interface Me {
   id: number;
@@ -10,11 +14,13 @@ interface Me {
 
 /** 我的：个人信息 + 今日概览 + 我的计划 + 我的令牌 + 退出登录 */
 export default function MePage() {
+  const navigate = useNavigate();
   const [me, setMe] = useState<Me | null>(null);
   const [stats, setStats] = useState<Stats | null>(null);
   const [plans, setPlans] = useState<Plan[]>([]);
   const [tokens, setTokens] = useState<ApiTokenInfo[]>([]);
   const [msg, setMsg] = useState("");
+  const [confirmLogout, setConfirmLogout] = useState(false);
 
   useEffect(() => {
     api<Me>("/identity/me").then(setMe).catch(() => undefined);
@@ -39,10 +45,10 @@ export default function MePage() {
   };
 
   const logout = () => {
-    if (!window.confirm("退出登录？本机的 token 会清除（服务器上的令牌仍有效，可在这里吊销）。", )) return;
     clearToken();
-    window.location.hash = "#/login";
-    window.location.reload();
+    clearReviewSnapshot();
+    setConfirmLogout(false);
+    navigate("/login", { replace: true });
   };
 
   const fmt = (v: string) => new Date(v).toLocaleString("zh-CN", { hour12: false });
@@ -103,10 +109,16 @@ export default function MePage() {
 
       {msg && <div className="form-msg">{msg}</div>}
 
-      <button className="btn ghost block" style={{ marginTop: 20 }} onClick={logout}>
+      <button className="btn ghost block" style={{ marginTop: 20 }} onClick={() => setConfirmLogout(true)}>
         退出登录
       </button>
       <p className="me-hint" style={{ textAlign: "center" }}>忙里偷题 · Small tips, big steps</p>
+
+      {confirmLogout && <Sheet title="退出登录？" onClose={() => setConfirmLogout(false)}>
+        <p>本机令牌和未完成的复习快照会被清除，服务器上的学习记录不受影响。</p>
+        <Button block variant="danger" onClick={logout}>确认退出</Button>
+        <Button block variant="ghost" onClick={() => setConfirmLogout(false)}>取消</Button>
+      </Sheet>}
     </div>
   );
 }

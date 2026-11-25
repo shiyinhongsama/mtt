@@ -11,10 +11,11 @@ export default function LoginPage({ onSuccess }: { onSuccess: () => void }) {
   const submit = async (values: { username: string; password: string }) => {
     setBusy(true);
     try {
-      const r = await api<{ token: string }>("/identity/login", {
+      const r = await api<{ token: string; role: string }>("/identity/login", {
         method: "POST",
         body: values,
       });
+      if (r.role !== "admin") throw new Error("管理端仅管理员可登录");
       setToken(r.token);
       message.success("欢迎回来");
       onSuccess();
