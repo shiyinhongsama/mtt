@@ -36,6 +36,8 @@ WORKDIR /app/moneyToTip
 # 服务端（含依赖锁定）
 COPY moneyToTip/pyproject.toml moneyToTip/uv.lock moneyToTip/README.md ./
 COPY moneyToTip/mtt ./mtt
+# 产品主页落地页：mtt.main 启动时探测 ./web，缺失会静默回退到 PWA 首页
+COPY moneyToTip/web ./web
 RUN uv sync --no-dev --frozen
 
 # 前端构建产物（服务端自动探测 ../moneyToTipApp/dist 与 ../moneyToTipConsole/dist）
