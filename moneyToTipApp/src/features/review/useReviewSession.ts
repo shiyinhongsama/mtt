@@ -2,11 +2,11 @@ import { useEffect, useReducer, useRef, useState } from "react";
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { api } from "../../api/client";
 import type { DueQuestion, Plan, Rating, UserInfo } from "../../api/types";
-type Identity = Pick<UserInfo, "id" | "username" | "role">;
-import { getActivePlanIds } from "../../pages/PlansPage";
 import { submitReview } from "./api";
 import { initialReviewSession, reviewReducer } from "./session";
 import { loadReviewSnapshot, saveReviewSnapshot } from "./snapshot";
+
+type Identity = Pick<UserInfo, "id" | "username" | "role">;
 
 export default function useReviewSession(categoryId: number | null, bankId: number | null) {
   const [state, dispatch] = useReducer(reviewReducer, initialReviewSession);
@@ -20,8 +20,14 @@ export default function useReviewSession(categoryId: number | null, bankId: numb
     enabled: Boolean(identity.data),
     retry: false,
   });
+  const active = useQuery({
+    queryKey: ["plans", "active"],
+    queryFn: () => api<{ plan_ids: number[] }>("/plans/active"),
+    enabled: Boolean(identity.data),
+    retry: false,
+  });
   const userId = identity.data?.id;
-  const selectedPlan = plans.data?.find((plan) => getActivePlanIds().includes(plan.id)) ?? null;
+  const selectedPlan = plans.data?.find((plan) => active.data?.plan_ids.includes(plan.id)) ?? null;
   const effectiveBankId = selectedPlan?.bank_id ?? bankId;
 
   useEffect(() => {
@@ -43,7 +49,7 @@ export default function useReviewSession(categoryId: number | null, bankId: numb
       if (effectiveBankId) params.set("bank_id", String(effectiveBankId));
       return api<DueQuestion[]>(`/reviews/due?${params}`);
     },
-    enabled: userId !== undefined && restoredUser === userId && !restoredSnapshot.current && plans.isSuccess,
+    enabled: userId !== undefined && restoredUser === userId && !restoredSnapshot.current && plans.isSuccess && active.isSuccess,
     retry: false,
   });
 

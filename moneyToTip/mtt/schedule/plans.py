@@ -1,5 +1,7 @@
 """训练计划接口：每日目标 + 加练（百词斩式玩法，§16.2 一等公民）。"""
 
+import json
+
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel, Field
 from sqlalchemy import and_, or_
@@ -8,11 +10,52 @@ from sqlmodel import Session, func, select
 from mtt.corpus.models import Question, QuestionBank
 from mtt.db import get_session
 from mtt.deps import get_current_user
-from mtt.identity.models import User
+from mtt.identity.models import User, UserPreference
 from mtt.schedule.models import Plan, ReviewLog
 from mtt.timeutil import local_day_start_utc
 
 router = APIRouter(prefix="/plans", tags=["schedule"])
+ACTIVE_PLANS_KEY = "active_plan_ids"
+
+
+class ActivePlans(BaseModel):
+    plan_ids: list[int]
+
+
+def get_active_plan_ids(session: Session, user: User) -> list[int]:
+    preference = session.exec(select(UserPreference).where(
+        UserPreference.user_id == user.id, UserPreference.key == ACTIVE_PLANS_KEY)).first()
+    if preference is None:
+        return []
+    try:
+        value = json.loads(preference.value)
+        return [int(item) for item in value] if isinstance(value, list) else []
+    except (TypeError, ValueError, json.JSONDecodeError):
+        return []
+
+
+@router.get("/active")
+def read_active_plans(user: User = Depends(get_current_user),
+                      session: Session = Depends(get_session)) -> dict:
+    return {"plan_ids": get_active_plan_ids(session, user)}
+
+
+@router.put("/active")
+def replace_active_plans(payload: ActivePlans, user: User = Depends(get_current_user),
+                         session: Session = Depends(get_session)) -> dict:
+    plan_ids = list(dict.fromkeys(payload.plan_ids))
+    owned = session.exec(select(Plan.id).where(
+        Plan.owner_id == user.id, Plan.id.in_(plan_ids))).all() if plan_ids else []
+    if len(owned) != len(plan_ids):
+        raise HTTPException(404, "plan not found")
+    preference = session.exec(select(UserPreference).where(
+        UserPreference.user_id == user.id, UserPreference.key == ACTIVE_PLANS_KEY)).first()
+    if preference is None:
+        preference = UserPreference(user_id=user.id, key=ACTIVE_PLANS_KEY, value="[]")
+    preference.value = json.dumps(plan_ids)
+    session.add(preference)
+    session.commit()
+    return {"plan_ids": plan_ids}
 
 
 class PlanCreate(BaseModel):

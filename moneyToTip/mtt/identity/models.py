@@ -1,6 +1,7 @@
 from datetime import datetime
 
 from sqlmodel import Field, SQLModel
+from sqlalchemy import Index
 
 from mtt.timeutil import utcnow
 
@@ -25,3 +26,16 @@ class ApiToken(SQLModel, table=True):
     created_at: datetime = Field(default_factory=utcnow)
     last_used_at: datetime | None = None  # 最近使用时间（authenticate 时刷新）
     revoked: bool = False
+
+
+class UserPreference(SQLModel, table=True):
+    """跨设备同步的轻量用户偏好；值使用 JSON 字符串。"""
+
+    id: int | None = Field(default=None, primary_key=True)
+    user_id: int = Field(foreign_key="user.id", index=True)
+    key: str
+    value: str
+
+    __table_args__ = (
+        Index("uq_userpreference_user_key", "user_id", "key", unique=True),
+    )

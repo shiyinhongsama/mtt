@@ -9,6 +9,7 @@ import PendingPage from "./pages/PendingPage";
 import PlansPage from "./pages/PlansPage";
 import ReviewPage from "./pages/ReviewPage";
 import StatsPage from "./pages/StatsPage";
+import TodayPage from "./pages/TodayPage";
 
 function useAuthRedirect() {
   const [, setTick] = useState(0);
@@ -42,7 +43,7 @@ export default function App() {
     <AppShell>
       <Routes location={location}>
         <Route path="/" element={<Navigate to="/today" replace />} />
-        <Route path="/today" element={<ReviewPage />} />
+        <Route path="/today" element={<TodayPage />} />
         <Route path="/review" element={<ReviewPage />} />
         <Route path="/plans" element={<PlansPage />} />
         <Route path="/add" element={<AddPage />} />

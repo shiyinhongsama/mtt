@@ -1,18 +1,89 @@
 """growth 接口：北极星指标、热力图（R-growth-03）、分类掌握度（R-growth-04 前置）。"""
 
 from datetime import date, datetime, timedelta
+from statistics import median
 
 from fastapi import APIRouter, Depends
+from sqlalchemy import and_, or_
 from sqlmodel import Session, func, select
 
 from mtt.corpus.models import Category, Question, QuestionBank
 from mtt.db import get_session
 from mtt.deps import get_current_user
 from mtt.identity.models import User
-from mtt.schedule.models import QuestionState, ReviewLog
-from mtt.timeutil import local_day_start_utc, utcnow
+from mtt.schedule.models import Plan, QuestionState, ReviewLog
+from mtt.schedule.plans import get_active_plan_ids
+from mtt.timeutil import local_day_start_utc, local_midnight_as_utc, utcnow
 
 router = APIRouter(prefix="/stats", tags=["growth"])
+
+
+@router.get("/today")
+def today_stats(user: User = Depends(get_current_user),
+                session: Session = Depends(get_session)) -> dict:
+    now = utcnow()
+    day_start = local_day_start_utc()
+    plan_ids = get_active_plan_ids(session, user)
+    plans = session.exec(select(Plan).where(
+        Plan.owner_id == user.id, Plan.id.in_(plan_ids))).all() if plan_ids else []
+    all_banks = not plans or any(plan.bank_id is None for plan in plans)
+    bank_ids = [plan.bank_id for plan in plans if plan.bank_id is not None]
+
+    def scope(query):
+        query = query.where(Question.owner_id == user.id, Question.status == "active")
+        return query if all_banks else query.where(Question.bank_id.in_(bank_ids))
+
+    question_scope = scope(select(Question.id))
+    new_count = session.exec(scope(select(func.count()).select_from(Question).where(
+        Question.id.not_in(select(QuestionState.question_id).where(QuestionState.user_id == user.id))
+    ))).one()
+    due_count = session.exec(scope(select(func.count()).select_from(QuestionState).join(
+        Question, Question.id == QuestionState.question_id).where(
+        QuestionState.user_id == user.id, QuestionState.due_at <= now))).one() + new_count
+    relearning_count = session.exec(scope(select(func.count()).select_from(QuestionState).join(
+        Question, Question.id == QuestionState.question_id).where(
+        QuestionState.user_id == user.id, QuestionState.status == "relearning"))).one()
+
+    completed_query = select(func.count(func.distinct(ReviewLog.question_id))).select_from(
+        ReviewLog).join(Question, Question.id == ReviewLog.question_id).where(
+        ReviewLog.user_id == user.id, ReviewLog.is_help_request == False,  # noqa: E712
+        ReviewLog.reviewed_at >= day_start)
+    if plans:
+        legacy = ReviewLog.plan_id.is_(None)
+        if not all_banks:
+            legacy = and_(legacy, Question.bank_id.in_(bank_ids))
+        completed_query = completed_query.where(or_(ReviewLog.plan_id.in_(plan_ids), legacy))
+    completed_count = session.exec(completed_query).one()
+    goal_count = sum(plan.daily_goal for plan in plans)
+    goal_met = completed_count >= goal_count if goal_count else due_count == 0
+    shortage = (not goal_met and goal_count > 0 and completed_count + due_count < goal_count)
+
+    durations = session.exec(select(ReviewLog.duration_ms).where(
+        ReviewLog.user_id == user.id, ReviewLog.is_help_request == False,  # noqa: E712
+        ReviewLog.duration_ms > 0)).all()
+    estimated_minutes = median(durations) / 60_000 if len(durations) >= 5 else None
+
+    future_states = session.exec(scope(select(QuestionState.due_at).select_from(QuestionState).join(
+        Question, Question.id == QuestionState.question_id).where(
+        QuestionState.user_id == user.id, QuestionState.due_at < local_day_start_utc(7)))).all()
+    forecast_counts = {(day_start + timedelta(days=offset)).date().isoformat(): 0
+                       for offset in range(7)}
+    for due_at in future_states:
+        local_day = due_at.astimezone().date()
+        key = max(local_day, day_start.astimezone().date()).isoformat()
+        if key in forecast_counts:
+            forecast_counts[key] += 1
+    today_key = day_start.date().isoformat()
+    forecast_counts[today_key] += new_count
+
+    return {
+        "due_count": due_count, "new_count": new_count,
+        "relearning_count": relearning_count, "completed_count": completed_count,
+        "goal_count": goal_count, "goal_met": goal_met,
+        "shortage_reason": "not_enough_due_questions" if shortage else None,
+        "estimated_minutes": estimated_minutes,
+        "forecast": [{"date": key, "count": count} for key, count in forecast_counts.items()],
+    }
 
 
 def _is_mature():

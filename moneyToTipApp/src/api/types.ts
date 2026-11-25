@@ -137,6 +137,18 @@ export interface Category {
   children: Category[];
 }
 
+export interface TodayStats {
+  due_count: number;
+  new_count: number;
+  relearning_count: number;
+  completed_count: number;
+  goal_count: number;
+  goal_met: boolean;
+  shortage_reason: "not_enough_due_questions" | null;
+  estimated_minutes: number | null;
+  forecast: { date: string; count: number }[];
+}
+
 export interface UserInfo {
   id: number;
   username: string;

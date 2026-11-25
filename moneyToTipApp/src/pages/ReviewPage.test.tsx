@@ -41,6 +41,9 @@ it("keeps the question on failure, retries the same key, then advances", async (
     if (url === "/api/v1/plans") {
       return new Response("[]", { status: 200, headers: { "Content-Type": "application/json" } });
     }
+    if (url === "/api/v1/plans/active") {
+      return new Response(JSON.stringify({ plan_ids: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
     if (url.startsWith("/api/v1/reviews/due")) {
       return new Response(JSON.stringify([first, second]),
         { status: 200, headers: { "Content-Type": "application/json" } });
@@ -92,6 +95,9 @@ it("keeps the current question when a later queue refresh fails", async () => {
     if (url === "/api/v1/plans") {
       return new Response("[]", { status: 200, headers: { "Content-Type": "application/json" } });
     }
+    if (url === "/api/v1/plans/active") {
+      return new Response(JSON.stringify({ plan_ids: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
+    }
     if (url.startsWith("/api/v1/reviews/due")) {
       dueRequests += 1;
       return dueRequests === 1
@@ -132,6 +138,9 @@ it("restores the saved question after an authentication retry", async () => {
     }
     if (url === "/api/v1/plans") {
       return new Response("[]", { status: 200, headers: { "Content-Type": "application/json" } });
+    }
+    if (url === "/api/v1/plans/active") {
+      return new Response(JSON.stringify({ plan_ids: [] }), { status: 200, headers: { "Content-Type": "application/json" } });
     }
     throw new Error(`Unexpected request: ${url}`);
   }));

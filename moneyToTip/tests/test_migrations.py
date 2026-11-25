@@ -74,3 +74,7 @@ def test_fresh_install_uses_current_schema(tmp_path: Path, monkeypatch):
     columns = {c["name"] for c in inspect(mtt.db.engine).get_columns("questionstate")}
     assert {"due_at", "stability_days", "interval_minutes", "algorithm_version"} <= columns
     assert "due_date" not in columns
+    inspector = inspect(mtt.db.engine)
+    assert "userpreference" in inspector.get_table_names()
+    assert any(index["unique"] and set(index["column_names"]) == {"user_id", "key"}
+               for index in inspector.get_indexes("userpreference"))

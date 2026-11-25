@@ -130,3 +130,23 @@ def test_legacy_log_uses_bank_scope(client, auth, admin):
     current = next(p for p in client.get("/api/v1/plans", headers=auth).json()
                    if p["id"] == plan["id"])
     assert current["today_done"] == 1
+
+
+def test_active_plan_preferences_are_user_scoped_and_atomic(client, auth):
+    mine = client.post("/api/v1/plans", headers=auth, json={
+        "name": "我的跨设备计划", "daily_goal": 5}).json()
+    other = client.post("/api/v1/identity/users", headers=auth, json={
+        "username": "preference-other-user", "password": "pw", "role": "user"}).json()
+    other_auth = {"Authorization": f"Bearer {other['token']}"}
+    theirs = client.post("/api/v1/plans", headers=other_auth, json={
+        "name": "他人偏好计划", "daily_goal": 3}).json()
+
+    rejected = client.put("/api/v1/plans/active", headers=auth,
+                          json={"plan_ids": [mine["id"], theirs["id"]]})
+    assert rejected.status_code == 404
+    assert client.get("/api/v1/plans/active", headers=auth).json() == {"plan_ids": []}
+
+    saved = client.put("/api/v1/plans/active", headers=auth, json={"plan_ids": [mine["id"]]})
+    assert saved.status_code == 200
+    assert client.get("/api/v1/plans/active", headers=auth).json() == {"plan_ids": [mine["id"]]}
+    assert client.get("/api/v1/plans/active", headers=other_auth).json() == {"plan_ids": []}
