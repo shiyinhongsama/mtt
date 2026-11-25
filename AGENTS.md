@@ -46,7 +46,7 @@ docker compose up -d --build
 docker compose logs -f
 ```
 
-当前 App 与 Console 尚无前端测试脚本；实施体验重设计计划后再加入并运行 `npm test`、E2E 和视觉回归。不要声称未执行的检查已经通过。
+App 与 Console 使用 `npm test` 运行组件测试；App 另有 `npm run test:e2e` 与 `npm run test:visual`。E2E 使用独立 SQLite 和动态端口，不得连接开发数据库。不要声称未执行的检查已经通过。
 
 ## 3. 不可破坏的学习语义
 

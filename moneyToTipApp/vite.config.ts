@@ -46,7 +46,7 @@ export default defineConfig({
   ],
   server: {
     port: 5173,
-    proxy: { "/api": "http://127.0.0.1:8000" },
+    proxy: { "/api": process.env.MTT_API_ORIGIN ?? "http://127.0.0.1:8000" },
   },
   preview: {
     port: 8001,

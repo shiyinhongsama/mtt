@@ -15,7 +15,7 @@ export default function ReviewRatingBar({ question, disabled, onRate }: {
   onRate: (rating: Rating) => void;
 }) {
   return (
-    <div className={styles.ratings} aria-label="记忆自评">
+    <div className={styles.ratings} role="group" aria-label="记忆自评">
       {ratings.map((rating) => (
         <button
           type="button"

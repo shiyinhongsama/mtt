@@ -59,7 +59,7 @@
 - Produces: `renderAt(route: string)`、`dueQuestion(id: number)` 测试工具。
 - Produces: `npm run test`、`npm run test:coverage`、`npm run api:generate`。
 
-- [ ] **Step 1: 安装依赖并建立测试脚本**
+- [x] **Step 1: 安装依赖并建立测试脚本**
 
 ```bash
 cd moneyToTipApp
@@ -105,7 +105,7 @@ export default defineConfig({
 import "@testing-library/jest-dom/vitest";
 ```
 
-- [ ] **Step 2: 为错误分类与 401 行为写失败测试**
+- [x] **Step 2: 为错误分类与 401 行为写失败测试**
 
 ```ts
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -136,7 +136,7 @@ describe("api", () => {
 Run: `npm test -- src/api/client.test.ts`
 Expected: FAIL，因为 `ApiError` 和错误分类尚未实现。
 
-- [ ] **Step 3: 实现统一错误并接入 QueryClient**
+- [x] **Step 3: 实现统一错误并接入 QueryClient**
 
 `src/api/client.ts` 保留现有 token 键 `mtt_token`，实现以下公开类型；网络异常不得伪装成空数组：
 
@@ -173,7 +173,7 @@ const queryClient = new QueryClient({
 });
 ```
 
-- [ ] **Step 4: 生成契约并运行基座回归**
+- [x] **Step 4: 生成契约并运行基座回归**
 
 启动后端后执行：
 
@@ -185,7 +185,7 @@ npm run build
 
 Expected: 两项 API 测试通过，TypeScript 与生产构建通过；`StudyStatus` 改为 `"new" | "learning" | "review" | "relearning"`，`DueQuestion` 包含服务端 `rating_previews`，`ReviewResult` 包含 `decision`。
 
-- [ ] **Step 5: 提交基座**
+- [x] **Step 5: 提交基座**
 
 ```bash
 git add moneyToTipApp
@@ -207,7 +207,7 @@ git commit -m "test: add app API and query foundation"
 - Produces: `submitReview(payload: ReviewSubmit) => Promise<ReviewResult>`，不改变 `client_id`。
 - `ReviewPhase` 仅允许 `loading | answering | rating | submitting | submitted | failed | complete`。
 
-- [ ] **Step 1: 写提交、失败、重试和重学队列测试**
+- [x] **Step 1: 写提交、失败、重试和重学队列测试**
 
 ```ts
 import { describe, expect, it } from "vitest";
@@ -254,7 +254,7 @@ describe("reviewReducer", () => {
 Run: `npm test -- src/features/review/session.test.ts`
 Expected: FAIL，因为状态机文件不存在。
 
-- [ ] **Step 2: 实现纯 reducer 与幂等提交载荷**
+- [x] **Step 2: 实现纯 reducer 与幂等提交载荷**
 
 状态必须显式保存以下数据，禁止再用互相独立的 ref 推导提交状态：
 
@@ -283,7 +283,7 @@ export const initialReviewSession: ReviewSessionState = {
 
 `RATE` 一次性生成并保存载荷；`SUBMIT_FAILED` 只改变 `phase/error`；`RETRY` 不触碰载荷；只有 `SUBMIT_SUCCEEDED` 允许进入 `submitted`；`NEXT` 优先消费原队列，再消费 `relearningQueue`，最后进入 `complete`。
 
-- [ ] **Step 3: 实现版本化快照并验证退出清除**
+- [x] **Step 3: 实现版本化快照并验证退出清除**
 
 快照键固定为 `mtt_review_snapshot_v2`，内容包含 `userId` 和 `state`。解析时验证 `version === 2`、用户一致、当前题属于队列；损坏 JSON 返回 `null`。测试必须覆盖刷新恢复、不同用户隔离和退出清除：
 
@@ -295,7 +295,7 @@ expect(loadReviewSnapshot(4)).toBeNull();
 expect(localStorage.getItem("mtt_token")).toBeNull();
 ```
 
-- [ ] **Step 4: 运行状态机与既有后端幂等回归**
+- [x] **Step 4: 运行状态机与既有后端幂等回归**
 
 ```bash
 cd moneyToTipApp && npm test -- src/features/review
@@ -304,7 +304,7 @@ cd ../moneyToTip && uv run --frozen pytest tests/test_schedule.py -q
 
 Expected: 前端状态机测试通过；后端既有幂等与排期测试保持通过。
 
-- [ ] **Step 5: 提交会话单元**
+- [x] **Step 5: 提交会话单元**
 
 ```bash
 git add moneyToTipApp/src/features/review moneyToTipApp/src/test
@@ -333,7 +333,7 @@ git commit -m "feat: add recoverable review session state"
 - Produces: `Skeleton`、`EmptyState`、`ErrorState`、`Sheet`、`Toast`。
 - Produces: 主导航 `/today`、`/library`、`/add`、`/me`；`/review` 和 `/insights` 不显示底部导航。
 
-- [ ] **Step 1: 写可访问性与导航测试**
+- [x] **Step 1: 写可访问性与导航测试**
 
 ```tsx
 it("blocks duplicate activation while loading", async () => {
@@ -355,7 +355,7 @@ it("uses four primary destinations and hides chrome in focus mode", () => {
 Run: `npm test -- src/components`
 Expected: FAIL，因为新组件和路由尚不存在。
 
-- [ ] **Step 2: 建立纸张、墨色、暖色品牌令牌**
+- [x] **Step 2: 建立纸张、墨色、暖色品牌令牌**
 
 `tokens.css` 至少定义下列稳定变量，页面不得再各自硬编码同类值：
 
@@ -389,11 +389,11 @@ Expected: FAIL，因为新组件和路由尚不存在。
 }
 ```
 
-- [ ] **Step 3: 实现组件和路由壳**
+- [x] **Step 3: 实现组件和路由壳**
 
 `Button` 在 `loading` 时同时设置 `disabled`、`aria-busy="true"` 和可读文本“保存中”；`ErrorState` 必须提供显式重试按钮；`Sheet` 在移动端全屏并支持 Escape 关闭。`AppShell` 根据路由隐藏专注模式导航，登录页不渲染应用壳。
 
-- [ ] **Step 4: 验证 360px 与生产构建**
+- [x] **Step 4: 验证 360px 与生产构建**
 
 ```bash
 npm test -- src/components
@@ -402,7 +402,7 @@ npm run build
 
 Expected: 组件测试通过；构建通过；后续 Playwright 中 360px 页面无横向溢出。
 
-- [ ] **Step 5: 提交视觉基座**
+- [x] **Step 5: 提交视觉基座**
 
 ```bash
 git add moneyToTipApp/src moneyToTipApp/package.json moneyToTipApp/package-lock.json
@@ -424,7 +424,7 @@ git commit -m "feat: add mobile app design system"
 - Produces: `formatInterval(minutes: number) => string`，分钟/小时/天展示来自真实 API。
 - Produces: 网络失败内联文案“结果尚未保存”及“重试”；提交中评分和下一题全部禁用。
 
-- [ ] **Step 1: 写页面级失败与恢复测试**
+- [x] **Step 1: 写页面级失败与恢复测试**
 
 使用 MSW 或可控 fetch mock 返回两道到期题；第一题 `rating_previews.good.interval_minutes = 234`。测试：
 
@@ -442,12 +442,12 @@ expect(screen.getByRole("heading", { name: secondQuestion.stem })).toBeVisible()
 
 另写 401 用例：保存快照后进入登录页，重新登录恢复同一题；队列失败用例必须保留旧题而不是展示“今日完成”。
 
-- [ ] **Step 2: 运行并确认 RED**
+- [x] **Step 2: 运行并确认 RED**
 
 Run: `npm test -- src/pages/ReviewPage.test.tsx`
 Expected: 旧页面静默吞掉提交失败，测试在“结果尚未保存”断言失败。
 
-- [ ] **Step 3: 接入 reducer、快照与评分组件**
+- [x] **Step 3: 接入 reducer、快照与评分组件**
 
 `useReviewSession` 负责 Query 拉取和 Mutation 提交，reducer 只处理状态。评分条固定使用以下顺序和文案：
 
@@ -462,7 +462,7 @@ const ratings = [
 
 每个按钮展示 `question.rating_previews[value]` 的间隔。数字键 1–4 仅在 `rating` 阶段生效，Enter 只在可进入下一题时生效；输入框内不得触发全局快捷键。AI 面板失败只更新面板自身，不改变复习状态机。
 
-- [ ] **Step 4: 运行复习全链路组件测试**
+- [x] **Step 4: 运行复习全链路组件测试**
 
 ```bash
 npm test -- src/features/review src/pages/ReviewPage.test.tsx
@@ -471,7 +471,7 @@ npm run build
 
 Expected: 成功、失败、重试、刷新恢复、401 恢复、重复点击和重学队列测试全部通过。
 
-- [ ] **Step 5: 提交专注复习体验**
+- [x] **Step 5: 提交专注复习体验**
 
 ```bash
 git add moneyToTipApp/src
@@ -498,7 +498,7 @@ git commit -m "feat: redesign reliable focus review"
 - Produces: `GET /api/v1/stats/today`，返回 `due_count`、`new_count`、`relearning_count`、`completed_count`、`goal_count`、`goal_met`、`estimated_minutes: number | null` 和 7 天 `forecast`。
 - 预计耗时仅在至少有 5 条带非零 `duration_ms` 的历史记录时返回中位数估算，否则为 `null`。
 
-- [ ] **Step 1: 写跨设备偏好和今日口径测试**
+- [x] **Step 1: 写跨设备偏好和今日口径测试**
 
 后端测试创建两个用户、两个计划和跨日复习日志，验证：
 
@@ -511,11 +511,11 @@ assert client.get("/api/v1/plans/active", headers=other_auth).json() == {"plan_i
 
 今日接口必须按不同题目计数，重学不重复增加 `completed_count`；到期题不足时 `goal_met` 为 `false`，并返回明确的 `shortage_reason: "not_enough_due_questions" | null`。
 
-- [ ] **Step 2: 添加 Alembic 偏好表与聚合接口**
+- [x] **Step 2: 添加 Alembic 偏好表与聚合接口**
 
 新增 `UserPreference`：`(user_id, key)` 唯一，`value` 存 JSON 字符串。迁移只负责新表；在 `plans.py` 实现事务替换，在 `growth/router.py` 用现有 `QuestionState`、`ReviewLog` 和 `Plan` 聚合今日数据。禁止复制 `memory.py` 的排期公式。
 
-- [ ] **Step 3: 写今日页面加载、空态和真实不足状态**
+- [x] **Step 3: 写今日页面加载、空态和真实不足状态**
 
 ```tsx
 expect(screen.getByRole("button", { name: "继续今日复习" })).toBeVisible();
@@ -526,7 +526,7 @@ expect(screen.queryByText(/预计 .* 分钟/)).not.toBeInTheDocument();
 
 页面首屏只允许“继续今日复习”一个主按钮；今日完成时提供“加练”和“导入题目”次操作；未来 7 天负荷与“记忆洞察”使用真实接口数据并可点击进入对应列表。
 
-- [ ] **Step 4: 迁移计划页并执行全量回归**
+- [x] **Step 4: 迁移计划页并执行全量回归**
 
 移除 `mtt_active_plans` 的事实源地位，以 `/plans/active` Query 和 Mutation 替代。运行：
 
@@ -537,7 +537,7 @@ cd ../moneyToTipApp && npm test -- src/pages/TodayPage.test.tsx src/pages/PlansP
 
 Expected: 跨设备偏好、唯一题目进度、加载/空态/错误态和到期不足测试通过。
 
-- [ ] **Step 5: 提交今日体验**
+- [x] **Step 5: 提交今日体验**
 
 ```bash
 git add moneyToTip moneyToTipApp
@@ -564,7 +564,7 @@ git commit -m "feat: add truthful today dashboard"
 - 有复习日志的题执行 DELETE 返回 409，并提示改用 `/suspend`；无复习日志的题允许删除。
 - Produces: 题库统一状态筛选 `pending | active | flagged | suspended`，待确认不再是孤立主导航。
 
-- [ ] **Step 1: 写批量确认和安全删除后端测试**
+- [x] **Step 1: 写批量确认和安全删除后端测试**
 
 ```python
 def test_delete_question_with_history_requires_suspend(client, auth, reviewed_question):
@@ -580,11 +580,11 @@ def test_bulk_confirm_keeps_invalid_items_pending(client, auth, valid_pending, m
     assert response.json()["failures"] == [{"id": missing_answer_pending.id, "reason": "答案不能为空"}]
 ```
 
-- [ ] **Step 2: 实现事务明确的批量校验与删除保护**
+- [x] **Step 2: 实现事务明确的批量校验与删除保护**
 
 `validation.py` 提供 `validate_question(question: Question) -> list[str]`，至少校验题面、答案、选择题有效选项和来源说明。批量确认逐题返回失败原因，单题失败不得把其他成功项回滚；删除检查当前用户该题的 `ReviewLog`，有历史时返回 409。
 
-- [ ] **Step 3: 写题库搜索、选择和未保存提醒测试**
+- [x] **Step 3: 写题库搜索、选择和未保存提醒测试**
 
 ```tsx
 await user.type(screen.getByRole("searchbox", { name: "搜索题目" }), "事务");
@@ -597,7 +597,7 @@ expect(screen.getByText("1 道已确认，1 道需要修正")).toBeVisible();
 
 编辑器在移动端使用全屏 `Sheet`；脏表单关闭时弹出确认 Dialog，不使用原生 `alert` 或 `confirm`。
 
-- [ ] **Step 4: 运行题库和既有数据回归**
+- [x] **Step 4: 运行题库和既有数据回归**
 
 ```bash
 cd moneyToTip && uv run --frozen pytest tests/test_questions.py tests/test_data.py -q
@@ -606,7 +606,7 @@ cd ../moneyToTipApp && npm test -- src/pages/LibraryPage.test.tsx
 
 Expected: 搜索、筛选、批量确认、部分失败、编辑校验、暂停和删除保护全部通过。
 
-- [ ] **Step 5: 提交题库体验**
+- [x] **Step 5: 提交题库体验**
 
 ```bash
 git add moneyToTip/mtt/corpus moneyToTip/tests/test_questions.py moneyToTipApp/src
@@ -631,7 +631,7 @@ git commit -m "feat: unify library and pending review"
 - `recalled` 仅统计非 `again` 且非 AI 求助的有效日志；`total < 20` 时 `rate` 必须为 `null`。
 - `recovered_count` 统计窗口内先 `again`、随后 `good/easy` 的不同题目数。
 
-- [ ] **Step 1: 写真实保持率和小样本测试**
+- [x] **Step 1: 写真实保持率和小样本测试**
 
 ```python
 def test_retention_hides_percentage_below_twenty_reviews(client, auth, nineteen_logs):
@@ -645,15 +645,15 @@ def test_retention_excludes_help_and_counts_distinct_recovery(client, auth, twen
     assert data["recovered_count"] == 2
 ```
 
-- [ ] **Step 2: 实现独立聚合函数并验证**
+- [x] **Step 2: 实现独立聚合函数并验证**
 
 `insights.py` 提供 `memory_insights(session: Session, user_id: int, days: int, now: datetime) -> dict`，所有时间边界复用 `mtt.timeutil`，不得在 SQL 之外改写评分语义。`weak_categories` 必须携带可跳转的 `category_id`、实际保持率、样本量和到期题数。
 
-- [ ] **Step 3: 实现页面口径与下钻**
+- [x] **Step 3: 实现页面口径与下钻**
 
 小样本展示“15 / 19 次回忆成功”和“再完成 1 次有效复习后显示保持率”，不得显示 `78.9%`。每个数字可进入对应题目列表；页面提供“数据口径与排期说明”，展示 `R(t) = exp(-t/S)` 是排期近似，不承诺记忆效果。
 
-- [ ] **Step 4: 运行洞察与全量后端回归**
+- [x] **Step 4: 运行洞察与全量后端回归**
 
 ```bash
 cd moneyToTip && uv run --frozen pytest -q
@@ -662,7 +662,7 @@ cd ../moneyToTipApp && npm test -- src/pages/InsightsPage.test.tsx
 
 Expected: 后端全量测试通过；小样本、保持率、恢复、薄弱分类下钻和空态测试通过。
 
-- [ ] **Step 5: 提交记忆洞察**
+- [x] **Step 5: 提交记忆洞察**
 
 ```bash
 git add moneyToTip/mtt/growth moneyToTip/tests/test_growth.py moneyToTipApp/src
@@ -687,7 +687,7 @@ git commit -m "feat: explain memory retention and workload"
 - Produces: `POST /api/v1/identity/onboarding/sample`，为当前无题用户幂等创建示例题库和 3 道题，响应 `{ bank_id: number, question_ids: number[] }`。
 - 登录前保留复习快照；新登录用户与快照用户不一致时不得恢复旧会话；退出登录同时清除 token 和快照。
 
-- [ ] **Step 1: 写普通用户登录和示例幂等测试**
+- [x] **Step 1: 写普通用户登录和示例幂等测试**
 
 ```python
 def test_user_can_login_to_app(client, ordinary_user):
@@ -704,15 +704,15 @@ def test_sample_onboarding_is_idempotent(client, auth):
     assert len(first["question_ids"]) == 3
 ```
 
-- [ ] **Step 2: 实现登录和事务化示例数据**
+- [x] **Step 2: 实现登录和事务化示例数据**
 
 登录失败继续使用统一 401 文案；禁用账户返回 403。示例创建先检查当前用户是否已有示例题库，重复请求返回原 ID，不重复插题。示例题必须标记明确来源“忙里偷题示例”，不得伪装成用户材料。
 
-- [ ] **Step 3: 重做登录和首次会话**
+- [x] **Step 3: 重做登录和首次会话**
 
 登录页使用用户名/密码，不要求粘贴 token；提交中禁用按钮并显示错误。无题用户登录后进入引导，可“一键体验 3 道示例题”或“先导入自己的题”；已有题用户直接进入 `/today`。登录后根据 `/identity/me` 的 `id` 恢复快照。
 
-- [ ] **Step 4: 验证账户与恢复回归**
+- [x] **Step 4: 验证账户与恢复回归**
 
 ```bash
 cd moneyToTip && uv run --frozen pytest tests/test_identity.py tests/test_schedule.py -q
@@ -721,7 +721,7 @@ cd ../moneyToTipApp && npm test -- src/pages/LoginPage.test.tsx src/pages/Onboar
 
 Expected: 普通用户登录、示例幂等、401 恢复、跨用户快照隔离和退出清理测试通过。
 
-- [ ] **Step 5: 提交首次使用体验**
+- [x] **Step 5: 提交首次使用体验**
 
 ```bash
 git add moneyToTip/mtt/identity moneyToTip/tests/test_identity.py moneyToTipApp/src
@@ -745,7 +745,7 @@ git commit -m "feat: add password login and guided first review"
 - Produces: 刷新后保持当前页面；仪表盘跳题库的 `status` 和 `bank` 使用 search params。
 - Produces: `React.lazy` 分割 Markdown 编辑器、账户、数据和 Anki 页面。
 
-- [ ] **Step 1: 安装路由并写刷新位置测试**
+- [x] **Step 1: 安装路由并写刷新位置测试**
 
 ```bash
 cd moneyToTipConsole
@@ -755,7 +755,7 @@ npm install -D vitest jsdom @testing-library/react @testing-library/jest-dom
 
 `package.json` 增加 `"test": "vitest run"`；`vitest.config.ts` 使用 React 插件、`jsdom` 环境和 `src/test/setup.ts`，setup 文件导入 `@testing-library/jest-dom/vitest`。测试在 `#/questions?status=pending&bank=2` 渲染后断言题目页和筛选值存在；点击账户后断言 URL 变为 `#/users`，重新渲染仍停留在账户页。
 
-- [ ] **Step 2: 将页面状态迁移到路由并懒加载**
+- [x] **Step 2: 将页面状态迁移到路由并懒加载**
 
 `App.tsx` 不再用 `PageKey` 状态切换内容；`routes.tsx` 集中声明路由。懒加载统一形式：
 
@@ -767,7 +767,7 @@ const AnkiPage = lazy(() => import("./pages/AnkiPage"));
 
 使用 Ant Design `Spin` 作为 Suspense fallback，保持当前纸张/墨色样式，不扩展管理端重设计范围。
 
-- [ ] **Step 3: 验证路由与构建**
+- [x] **Step 3: 验证路由与构建**
 
 ```bash
 npm test
@@ -776,7 +776,7 @@ npm run build
 
 Expected: 路由测试和生产构建通过，构建产物包含按需页面 chunk。
 
-- [ ] **Step 4: 提交管理端配套改造**
+- [x] **Step 4: 提交管理端配套改造**
 
 ```bash
 git add moneyToTipConsole
@@ -800,7 +800,7 @@ git commit -m "refactor: add persistent console routes"
 - Produces: 360px、768px、1440px 的今日、复习、题库和洞察截图基线。
 - Produces: 登录 → 示例题 → 复习 → 网络失败 → 重试 → 下一题 → 刷新恢复的确定性 E2E。
 
-- [ ] **Step 1: 安装 Playwright 并建立隔离测试环境**
+- [x] **Step 1: 安装 Playwright 并建立隔离测试环境**
 
 ```bash
 cd moneyToTipApp
@@ -819,11 +819,11 @@ npx playwright install chromium
 }
 ```
 
-- [ ] **Step 2: 写失败重试与刷新恢复 E2E**
+- [x] **Step 2: 写失败重试与刷新恢复 E2E**
 
 测试通过 Playwright 的 `page.route` 拦截复习 POST：第一个处理函数调用 `route.abort("failed")`，第二个处理函数记录请求体并 `route.fulfill` 返回服务端结果；断言两次 `client_id` 相同、失败时题面不变、成功后才能下一题。刷新后从快照恢复第二题，并确认服务端只有一条第一题复习日志。
 
-- [ ] **Step 3: 写核心页面和视觉回归**
+- [x] **Step 3: 写核心页面和视觉回归**
 
 核心链路覆盖：普通用户登录、示例题、今日进度、题库搜索、批量确认、洞察小样本。视觉测试固定系统时间、时区 `Asia/Shanghai` 和动画禁用，分别使用：
 
@@ -837,7 +837,7 @@ const viewports = [
 
 每个视口断言 `document.documentElement.scrollWidth <= window.innerWidth`，移动端主评分按钮触控区域至少 44px。
 
-- [ ] **Step 4: 执行完整发布验收**
+- [x] **Step 4: 执行完整发布验收**
 
 ```bash
 cd moneyToTip && uv run --frozen pytest -q
@@ -847,7 +847,7 @@ cd ../moneyToTipConsole && npm test && npm run build
 
 Expected: 所有测试和构建通过；360px 无横向溢出；断网不丢答案、不重复写日志；普通用户无需 CLI 或 token 即可完成第一道复习；保持率均带样本量。
 
-- [ ] **Step 5: 更新文档并提交发布候选**
+- [x] **Step 5: 更新文档并提交发布候选**
 
 README 只写已落地能力，更新启动、测试与页面入口；将设计文档状态改为“已实现”前必须逐项核对验收标准。
 

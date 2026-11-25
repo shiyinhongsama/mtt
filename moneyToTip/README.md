@@ -23,12 +23,12 @@ uv run pytest                # 跑测试
 
 | 工程 | 形态 | 入口 | 登录 |
 |---|---|---|---|
-| [`moneyToTipApp`](../moneyToTipApp) | 复习端（React 18 + TS + Vite + PWA） | `/app/` | API token |
+| [`moneyToTipApp`](../moneyToTipApp) | 复习端（React 18 + TS + Vite + PWA） | `/app/` | 账号密码 |
 | [`moneyToTipConsole`](../moneyToTipConsole) | 管理端（React 18 + TS + Vite） | `/console/` | 账号密码（仅管理员） |
 
 另有本仓库的 Typer CLI（`mtt`），与 Web 管理端能力互补，只限本机使用。
 
-### 前端工程（独立仓库）
+### 独立前端工程
 
 - 复习端 `moneyToTipApp`：`npm run dev` → http://localhost:5173/app/（代理到 8000）
 - 管理端 `moneyToTipConsole`：`npm run dev` → http://localhost:5174/console/（代理到 8000）
