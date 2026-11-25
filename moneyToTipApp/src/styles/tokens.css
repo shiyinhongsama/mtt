@@ -1,0 +1,41 @@
+:root {
+  --color-canvas: #f4f1ea;
+  --color-surface: #fbf9f4;
+  --color-surface-pressed: #ede9df;
+  --color-ink: #292721;
+  --color-muted: #777268;
+  --color-line: #cfc9ba;
+  --color-accent: #a34d2d;
+  --color-accent-hover: #8f4025;
+  --color-success: #426b4b;
+  --color-danger: #a43f3f;
+  --color-on-ink: #fffdf8;
+  --paper: var(--color-canvas);
+  --paper-2: var(--color-surface-pressed);
+  --ink: var(--color-ink);
+  --accent: var(--color-accent);
+  --muted: var(--color-muted);
+  --line: var(--color-line);
+  --ok: var(--color-success);
+  --serif: "Noto Serif SC", "Songti SC", "STSong", serif;
+  --sans: "Noto Sans SC", "PingFang SC", "Microsoft YaHei", sans-serif;
+  --mono: "Space Mono", ui-monospace, monospace;
+  --space-1: 4px;
+  --space-2: 8px;
+  --space-3: 12px;
+  --space-4: 16px;
+  --space-6: 24px;
+  --radius-control: 10px;
+  --radius-card: 18px;
+  --duration-fast: 150ms;
+  --duration-normal: 220ms;
+  --safe-bottom: env(safe-area-inset-bottom, 0px);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 1ms !important;
+    transition-duration: 1ms !important;
+  }
+}

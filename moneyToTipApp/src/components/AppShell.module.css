@@ -1,0 +1,6 @@
+.shell { min-height: 100dvh; }
+.focused { min-height: 100dvh; background: var(--color-canvas); }
+.focusView { max-width: 720px; padding-top: 12px; padding-bottom: calc(28px + var(--safe-bottom)); }
+@media (max-width: 480px) {
+  .focusView { padding-inline: 14px; }
+}

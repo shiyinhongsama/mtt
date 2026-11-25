@@ -1,0 +1,23 @@
+.state {
+  min-height: 260px;
+  display: grid;
+  align-content: center;
+  justify-items: center;
+  gap: 12px;
+  padding: 32px 20px;
+  text-align: center;
+}
+.state h2 { font: 700 22px/1.5 var(--serif); }
+.state p { max-width: 38em; color: var(--color-muted); line-height: 1.7; }
+.action { margin-top: 8px; }
+.skeleton { display: grid; gap: 12px; padding: 24px 0; }
+.skeleton span {
+  display: block;
+  height: 18px;
+  border-radius: 4px;
+  background: var(--color-surface-pressed);
+  animation: pulse 1.2s ease-in-out infinite alternate;
+}
+.skeleton span:nth-child(2) { width: 82%; }
+.skeleton span:nth-child(3) { width: 64%; }
+@keyframes pulse { from { opacity: 0.5; } to { opacity: 1; } }

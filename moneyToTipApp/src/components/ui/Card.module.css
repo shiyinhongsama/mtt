@@ -1,0 +1,6 @@
+.card {
+  padding: 20px;
+  border: 1.5px solid var(--color-line);
+  border-radius: var(--radius-card);
+  background: var(--color-surface);
+}

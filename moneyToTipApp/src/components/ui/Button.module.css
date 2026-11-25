@@ -1,0 +1,28 @@
+.button {
+  min-width: 44px;
+  min-height: 48px;
+  padding: 12px 18px;
+  border: 1.5px solid var(--color-ink);
+  border-radius: var(--radius-control);
+  background: var(--color-ink);
+  color: var(--color-on-ink);
+  font: 600 15px/1.4 var(--sans);
+  cursor: pointer;
+  touch-action: manipulation;
+  transition: background var(--duration-fast), color var(--duration-fast), transform var(--duration-fast);
+}
+
+.button:hover:not(:disabled) { background: #3b3830; }
+.button:active:not(:disabled) { transform: translateY(1px); }
+.button:focus-visible { outline: 3px solid color-mix(in srgb, var(--color-accent) 38%, transparent); outline-offset: 3px; }
+.button:disabled { opacity: 0.52; cursor: not-allowed; }
+
+.primary { background: var(--color-accent); border-color: var(--color-accent); }
+.primary:hover:not(:disabled) { background: var(--color-accent-hover); }
+.secondary { background: var(--color-surface); color: var(--color-ink); }
+.secondary:hover:not(:disabled) { background: var(--color-surface-pressed); }
+.danger { background: transparent; color: var(--color-danger); border-color: var(--color-danger); }
+.danger:hover:not(:disabled) { background: color-mix(in srgb, var(--color-danger) 8%, transparent); }
+.ghost { background: transparent; color: var(--color-ink); border-color: transparent; }
+.ghost:hover:not(:disabled) { background: color-mix(in srgb, var(--color-ink) 6%, transparent); }
+.block { width: 100%; }
