@@ -149,6 +149,15 @@ export interface TodayStats {
   forecast: { date: string; count: number }[];
 }
 
+export interface MemoryInsights {
+  retention: { recalled: number; total: number; rate: number | null };
+  learning_count: number;
+  review_count: number;
+  recovered_count: number;
+  forecast: TodayStats["forecast"];
+  weak_categories: { category_id: number | null; name: string; recalled: number; total: number; rate: number; due_count: number }[];
+}
+
 export interface UserInfo {
   id: number;
   username: string;

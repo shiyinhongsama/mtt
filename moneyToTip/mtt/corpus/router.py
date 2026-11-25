@@ -247,7 +247,8 @@ def update_question(question_id: int, payload: QuestionUpdate,
             value = json.dumps(value, ensure_ascii=False)
         setattr(q, field, value)
     errors = validate_question(q)
-    if errors:
+    content_fields = {"stem", "answer", "qtype", "options", "source"}
+    if errors and content_fields & payload.model_fields_set:
         session.rollback()
         raise HTTPException(422, "；".join(errors))
     session.add(q)

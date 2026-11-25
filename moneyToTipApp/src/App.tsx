@@ -9,6 +9,7 @@ import LibraryPage from "./pages/LibraryPage";
 import PlansPage from "./pages/PlansPage";
 import ReviewPage from "./pages/ReviewPage";
 import StatsPage from "./pages/StatsPage";
+import InsightsPage from "./pages/InsightsPage";
 import TodayPage from "./pages/TodayPage";
 
 function useAuthRedirect() {
@@ -50,7 +51,7 @@ export default function App() {
         <Route path="/library" element={<LibraryPage />} />
         <Route path="/pending" element={<Navigate to="/library" replace />} />
         <Route path="/stats" element={<StatsPage />} />
-        <Route path="/insights" element={<StatsPage />} />
+        <Route path="/insights" element={<InsightsPage />} />
         <Route path="/me" element={<MePage />} />
         <Route path="*" element={<Navigate to="/today" replace />} />
       </Routes>

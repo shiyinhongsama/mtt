@@ -48,7 +48,7 @@ def test_startup_initializes_memory_schema_and_backup(client):
     assert {"due_at", "stability_days", "interval_minutes", "algorithm_version"} <= columns
     with engine.connect() as conn:
         version = conn.execute(text("SELECT version_num FROM alembic_version")).scalar_one()
-    assert version == "0002_memory_state"
+    assert version == "0003_user_preferences"
     stamp = datetime.now().strftime("%Y%m%d")
     backups = list((Path(settings.data_dir) / "backups").glob(f"mtt-{stamp}-*.db"))
     assert backups and all(path.stat().st_size > 0 for path in backups)

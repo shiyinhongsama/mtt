@@ -1,0 +1,8 @@
+.section { margin-top: 28px; }
+.head { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; }
+.head h2 { font-family: var(--font-display); font-size: 21px; }
+.head span, .empty { color: var(--color-muted); font-size: 12px; }
+.topic { display: flex; align-items: center; justify-content: space-between; min-height: 72px; border-bottom: 1px solid var(--color-line); color: var(--color-ink); text-decoration: none; }
+.topic > span:first-child { display: flex; flex-direction: column; gap: 5px; }
+.topic small { color: var(--color-muted); }
+.rate { color: var(--color-accent); font-weight: 700; }

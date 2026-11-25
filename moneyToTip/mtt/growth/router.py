@@ -10,12 +10,19 @@ from sqlmodel import Session, func, select
 from mtt.corpus.models import Category, Question, QuestionBank
 from mtt.db import get_session
 from mtt.deps import get_current_user
+from mtt.growth.insights import memory_insights
 from mtt.identity.models import User
 from mtt.schedule.models import Plan, QuestionState, ReviewLog
 from mtt.schedule.plans import get_active_plan_ids
 from mtt.timeutil import local_day_start_utc, local_midnight_as_utc, utcnow
 
 router = APIRouter(prefix="/stats", tags=["growth"])
+
+
+@router.get("/insights")
+def insights(days: int = 30, user: User = Depends(get_current_user),
+             session: Session = Depends(get_session)) -> dict:
+    return memory_insights(session, user.id, max(1, min(days, 365)), utcnow())
 
 
 @router.get("/today")

@@ -57,3 +57,55 @@ def test_today_estimates_from_median_of_five_durations(client, auth):
             session.commit()
             result = client.get("/api/v1/stats/today", headers=user_auth).json()
             assert result["estimated_minutes"] == (3 if index == 4 else None)
+
+
+def test_retention_hides_percentage_below_twenty_reviews(client, auth):
+    user_id, user_auth = _user(client, auth, "insights-small-sample-user")
+    with Session(engine) as session:
+        for index in range(19):
+            question = create_question(session, user_id, f"小样本题 {index}", "答案", status="active")
+            rating = "good" if index < 15 else "again"
+            session.add(ReviewLog(user_id=user_id, question_id=question.id,
+                                  client_id=f"small-insight-{index}", rating=rating,
+                                  correct=rating != "again", reviewed_at=utcnow()))
+        session.commit()
+
+    response = client.get("/api/v1/stats/insights?days=30", headers=user_auth)
+
+    assert response.status_code == 200
+    assert response.json()["retention"] == {"recalled": 15, "total": 19, "rate": None}
+
+
+def test_retention_excludes_help_and_counts_distinct_recovery(client, auth):
+    from mtt.corpus.models import Category
+
+    user_id, user_auth = _user(client, auth, "insights-recovery-user")
+    with Session(engine) as session:
+        category = Category(owner_id=user_id, name="薄弱网络")
+        session.add(category)
+        session.commit()
+        session.refresh(category)
+        category_id = category.id
+        log_index = 0
+        for question_index in range(18):
+            question = create_question(session, user_id, f"恢复题 {question_index}", "答案",
+                                       status="active", category_id=category.id)
+            ratings = ["again", "good"] if question_index < 2 else (
+                ["good"] if question_index < 16 else ["again"])
+            for rating in ratings:
+                session.add(ReviewLog(user_id=user_id, question_id=question.id,
+                                      client_id=f"recovery-insight-{log_index}", rating=rating,
+                                      correct=rating != "again", reviewed_at=utcnow()))
+                log_index += 1
+        session.add(ReviewLog(user_id=user_id, question_id=question.id,
+                              client_id="recovery-help", rating="good", is_help_request=True,
+                              reviewed_at=utcnow()))
+        session.commit()
+
+    result = client.get("/api/v1/stats/insights?days=30", headers=user_auth).json()
+
+    assert result["retention"] == {"recalled": 16, "total": 20, "rate": 0.8}
+    assert result["recovered_count"] == 2
+    weak = next(item for item in result["weak_categories"] if item["category_id"] == category_id)
+    assert weak["total"] == 20 and weak["recalled"] == 16 and weak["rate"] == 0.8
+    assert "due_count" in weak and weak["name"] == "薄弱网络"

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useSearchParams } from "react-router-dom";
 import { api } from "../api/client";
 import type { Question } from "../api/types";
 import { EmptyState, ErrorState, Skeleton } from "../components/ui/Feedback";
@@ -12,6 +13,8 @@ interface BulkResult { confirmed_ids: number[]; failures: { id: number; reason: 
 
 export default function LibraryPage({ initialStatus = "" }: { initialStatus?: string }) {
   const queryClient = useQueryClient();
+  const [searchParams] = useSearchParams();
+  const categoryId = searchParams.get("category_id") ?? "";
   const [search, setSearch] = useState("");
   const [status, setStatus] = useState(initialStatus);
   const [page, setPage] = useState(1);
@@ -19,8 +22,8 @@ export default function LibraryPage({ initialStatus = "" }: { initialStatus?: st
   const [editing, setEditing] = useState<Question | null>(null);
   const [notice, setNotice] = useState("");
   const questions = useQuery({
-    queryKey: ["questions", "library", search, status, page],
-    queryFn: () => api<{ total: number; items: Question[] }>(`/questions?${new URLSearchParams({ status, q: search, page: String(page), page_size: "20" })}`),
+    queryKey: ["questions", "library", search, status, page, categoryId],
+    queryFn: () => api<{ total: number; items: Question[] }>(`/questions?${new URLSearchParams({ status, q: search, page: String(page), page_size: "20", ...(categoryId ? { category_id: categoryId } : {}) })}`),
     retry: false,
   });
   const bulk = useMutation({
