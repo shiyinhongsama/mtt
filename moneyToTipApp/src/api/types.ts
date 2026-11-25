@@ -1,8 +1,8 @@
-/** API 契约类型：与 mtt（FastAPI 服务端）对齐 */
+/** API 契约类型：与 FastAPI 服务端对齐。 */
 
 export type QType = "choice" | "blank" | "judge" | "qa" | "scenario";
+export type Rating = "again" | "hard" | "good" | "easy";
 
-/** 主观题：无自动判定，走四档自评（again/hard/good/easy） */
 export const SUBJECTIVE_TYPES: QType[] = ["qa", "scenario"];
 export const QTYPE_LABELS: Record<QType, string> = {
   choice: "选择",
@@ -38,17 +38,36 @@ export interface QuestionBank {
   created_at: string;
 }
 
-export type StudyStatus = "new" | "learning" | "mastered";
+export type StudyStatus = "new" | "learning" | "review" | "relearning";
 
-/** 到期题：题目 + 复习状态；label 是服务端映射好的用户语言（术语黑名单） */
+export interface StudyState {
+  status: StudyStatus;
+  label: string;
+  due_at: string | null;
+}
+
+export interface RatingPreview {
+  interval_minutes: number;
+  due_at: string;
+  status: StudyStatus;
+}
+
 export interface DueQuestion extends Question {
-  state: { status: StudyStatus; label: string };
+  state: StudyState;
+  rating_previews: Record<Rating, RatingPreview>;
+}
+
+export interface ReviewDecision {
+  interval_minutes: number | null;
+  due_at: string | null;
+  algorithm_version: string;
 }
 
 export interface ReviewResult {
   log_id: number;
   idempotent: boolean;
-  state: { status: StudyStatus; label: string };
+  state: StudyState | null;
+  decision: ReviewDecision;
 }
 
 export interface Stats {
@@ -72,7 +91,6 @@ export interface Bank {
   is_default: boolean;
 }
 
-/** 训练计划：题库范围 + 每日目标（百词斩式玩法） */
 export interface Plan {
   id: number;
   name: string;
@@ -95,8 +113,9 @@ export interface ReviewSubmit {
   question_id: number;
   client_id: string;
   correct: boolean;
-  rating: "again" | "hard" | "good" | "easy";
+  rating: Rating;
   duration_ms?: number;
+  plan_id?: number | null;
 }
 
 export interface QuestionCreate {
