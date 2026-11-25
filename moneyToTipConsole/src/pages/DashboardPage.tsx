@@ -1,10 +1,11 @@
 import { Card, Col, Row, Space, Statistic, Table, Tooltip, Typography } from "antd";
 import { useEffect, useState } from "react";
+import { Link } from "react-router-dom";
 import { api } from "../api";
 import type { Stats } from "../types";
 
 /** 仪表盘：KPI + 待办预警 + 30 天热力图 + 分类掌握度 */
-export default function DashboardPage({ goQuestions, goBank }: { goQuestions: (status: string) => void; goBank: (bankId: number) => void }) {
+export default function DashboardPage() {
   const [stats, setStats] = useState<Stats | null>(null);
 
   useEffect(() => {
@@ -38,15 +39,15 @@ export default function DashboardPage({ goQuestions, goBank }: { goQuestions: (s
         <Col xs={24} lg={8}>
           <Card title="待办" size="small">
             <Space direction="vertical" style={{ display: "flex" }}>
-              <a onClick={() => goQuestions("pending")}>
+              <Link to="/questions?status=pending">
                 预览区待确认：<b>{sc.pending ?? 0}</b> 道
-              </a>
-              <a onClick={() => goQuestions("flagged")}>
+              </Link>
+              <Link to="/questions?status=flagged">
                 已标记待修复：<b>{sc.flagged ?? 0}</b> 道
-              </a>
-              <a onClick={() => goQuestions("suspended")}>
+              </Link>
+              <Link to="/questions?status=suspended">
                 已暂停：<b>{sc.suspended ?? 0}</b> 道
-              </a>
+              </Link>
             </Space>
           </Card>
         </Col>
@@ -77,7 +78,8 @@ export default function DashboardPage({ goQuestions, goBank }: { goQuestions: (s
           pagination={false}
           columns={[
             { title: "题库", dataIndex: "name",
-              render: (v: string, b) => <a onClick={() => b.bank_id && goBank(b.bank_id)}>{v}</a> },
+              render: (v: string, b) => b.bank_id
+                ? <Link to={`/questions?status=active&bank=${b.bank_id}`}>{v}</Link> : v },
             { title: "在库", dataIndex: "total", width: 90 },
             { title: "已掌握", dataIndex: "mature", width: 90,
               render: (v: number) => <Typography.Text style={{ color: "#3A7D44" }}>{v}</Typography.Text> },

@@ -1,6 +1,7 @@
 import { ConfigProvider, App as AntdApp } from "antd";
 import zhCN from "antd/locale/zh_CN";
 import { createRoot } from "react-dom/client";
+import { HashRouter } from "react-router-dom";
 import App from "./App";
 import "./global.css";
 
@@ -19,7 +20,9 @@ createRoot(document.getElementById("root")!).render(
     }}
   >
     <AntdApp>
-      <App />
+      <HashRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <App />
+      </HashRouter>
     </AntdApp>
   </ConfigProvider>,
 );
