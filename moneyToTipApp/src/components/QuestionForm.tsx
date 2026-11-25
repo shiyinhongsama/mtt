@@ -1,135 +1,62 @@
 import { useEffect, useState } from "react";
 import { api } from "../api/client";
 import type { Bank, QuestionCreate } from "../api/types";
+import Button from "./ui/Button";
 import CategorySelect from "./CategorySelect";
 
-/** 手动加题表单（R-corpus-05）：新题默认进预览区 */
-export default function QuestionForm() {
-  const [qtype, setQtype] = useState<QuestionCreate["qtype"]>("choice");
-  const [stem, setStem] = useState("");
-  const [options, setOptions] = useState("");
-  const [answer, setAnswer] = useState("");
-  const [explanation, setExplanation] = useState("");
-  const [source, setSource] = useState("");
-  const [difficulty, setDifficulty] = useState(3);
-  const [tags, setTags] = useState("");
-  const [categoryId, setCategoryId] = useState<number | null>(null);
-  const [bankId, setBankId] = useState<number | null>(null);
-  const [banks, setBanks] = useState<Bank[]>([]);
+export function QuestionFields({ value, onChange }: {
+  value: QuestionCreate;
+  onChange: (patch: Partial<QuestionCreate>) => void;
+}) {
+  return (
+    <>
+      <div className="field"><label htmlFor="question-type">题型</label><select id="question-type" value={value.qtype} onChange={(event) => onChange({ qtype: event.target.value as QuestionCreate["qtype"] })}><option value="choice">选择</option><option value="blank">填空</option><option value="judge">判断</option><option value="qa">问答</option><option value="scenario">场景设计</option></select></div>
+      <div className="field"><label htmlFor="question-stem">题面</label><textarea id="question-stem" value={value.stem} placeholder="一道题只问一件事" onChange={(event) => onChange({ stem: event.target.value })} /></div>
+      {value.qtype === "choice" && <div className="field"><label htmlFor="question-options">选项（每行一个；正确项填在答案里）</label><textarea id="question-options" value={value.options.join("\n")} rows={3} onChange={(event) => onChange({ options: event.target.value.split("\n") })} /></div>}
+      <div className="field"><label htmlFor="question-answer">答案</label><input id="question-answer" value={value.answer} onChange={(event) => onChange({ answer: event.target.value })} /></div>
+      <div className="field"><label htmlFor="question-explanation">一句话讲解（可选）</label><textarea id="question-explanation" value={value.explanation} onChange={(event) => onChange({ explanation: event.target.value })} /></div>
+      <div className="field-row">
+        <div className="field"><label htmlFor="question-source">出处</label><input id="question-source" value={value.source} placeholder="笔记/文档位置" onChange={(event) => onChange({ source: event.target.value })} /></div>
+        <div className="field"><label htmlFor="question-difficulty">难度 1-5</label><input id="question-difficulty" type="number" min={1} max={5} value={value.difficulty} onChange={(event) => onChange({ difficulty: Number(event.target.value) })} /></div>
+      </div>
+      <div className="field"><label htmlFor="question-tags">标签（逗号分隔，可选）</label><input id="question-tags" value={value.tags.join("，")} onChange={(event) => onChange({ tags: event.target.value.split(/[,，]/) })} /></div>
+    </>
+  );
+}
 
-  useEffect(() => {
-    api<Bank[]>("/questions/banks").then(setBanks).catch(() => undefined);
-  }, []);
+export default function QuestionForm() {
+  const [value, setValue] = useState<QuestionCreate>({ qtype: "choice", stem: "", options: [], answer: "", explanation: "", source: "", tags: [], difficulty: 3, category_id: null, bank_id: null });
+  const [banks, setBanks] = useState<Bank[]>([]);
   const [msg, setMsg] = useState<{ text: string; err: boolean } | null>(null);
   const [saving, setSaving] = useState(false);
+  useEffect(() => { api<Bank[]>("/questions/banks").then(setBanks).catch(() => undefined); }, []);
+  const update = (patch: Partial<QuestionCreate>) => setValue((current) => ({ ...current, ...patch }));
 
   const submit = async () => {
-    if (!stem.trim() || !answer.trim()) {
+    if (!value.stem.trim() || !value.answer.trim()) {
       setMsg({ text: "题面和答案不能为空", err: true });
       return;
     }
-    const body: QuestionCreate = {
-      stem: stem.trim(),
-      answer: answer.trim(),
-      qtype,
-      options:
-        qtype === "choice"
-          ? options.split("\n").map((s) => s.trim()).filter(Boolean)
-          : [],
-      explanation: explanation.trim(),
-      source: source.trim(),
-      difficulty: Number(difficulty) || 3,
-      tags: tags.split(/[,，]/).map((s) => s.trim()).filter(Boolean),
-      category_id: categoryId,
-      bank_id: bankId,
-    };
     setSaving(true);
     try {
+      const body = { ...value, stem: value.stem.trim(), answer: value.answer.trim(),
+        options: value.options.map((item) => item.trim()).filter(Boolean),
+        tags: value.tags.map((item) => item.trim()).filter(Boolean) };
       await api("/questions", { method: "POST", body });
-      setMsg({ text: "已存入预览区，到「预览区」确认后进入复习队列。", err: false });
-      setStem(""); setOptions(""); setAnswer(""); setExplanation(""); setSource(""); setTags("");
-      setCategoryId(null);
-      setBankId(null);
-    } catch (e) {
-      setMsg({ text: e instanceof Error ? e.message : "出错了", err: true });
-    } finally {
-      setSaving(false);
-    }
+      setMsg({ text: "已存入题库待确认，确认后进入复习队列。", err: false });
+      setValue({ qtype: value.qtype, stem: "", options: [], answer: "", explanation: "", source: "", tags: [], difficulty: 3, category_id: null, bank_id: null });
+    } catch (error) {
+      setMsg({ text: error instanceof Error ? error.message : "出错了", err: true });
+    } finally { setSaving(false); }
   };
 
   return (
     <>
-      <div className="field">
-        <label>题型</label>
-        <select value={qtype} onChange={(e) => setQtype(e.target.value as QuestionCreate["qtype"])}>
-          <option value="choice">选择</option>
-          <option value="blank">填空</option>
-          <option value="judge">判断</option>
-        </select>
-      </div>
-      <div className="field">
-        <label>题面</label>
-        <textarea
-          value={stem}
-          placeholder="一道题只问一件事"
-          onChange={(e) => setStem(e.target.value)}
-        />
-      </div>
-      {qtype === "choice" && (
-        <div className="field">
-          <label>选项（每行一个；正确项填在答案里）</label>
-          <textarea value={options} rows={3} onChange={(e) => setOptions(e.target.value)} />
-        </div>
-      )}
-      <div className="field">
-        <label>答案</label>
-        <input value={answer} onChange={(e) => setAnswer(e.target.value)} />
-      </div>
-      <div className="field">
-        <label>一句话讲解（可选）</label>
-        <textarea value={explanation} onChange={(e) => setExplanation(e.target.value)} />
-      </div>
-      <div className="field-row">
-        <div className="field">
-          <label>出处（可选）</label>
-          <input
-            value={source}
-            placeholder="笔记/文档位置"
-            onChange={(e) => setSource(e.target.value)}
-          />
-        </div>
-        <div className="field">
-          <label>难度 1-5</label>
-          <input
-            type="number"
-            min={1}
-            max={5}
-            value={difficulty}
-            onChange={(e) => setDifficulty(Number(e.target.value))}
-          />
-        </div>
-      </div>
-      <div className="field">
-        <label>标签（逗号分隔，可选）</label>
-        <input value={tags} onChange={(e) => setTags(e.target.value)} />
-      </div>
-      <div className="field">
-        <label>分类（可选）</label>
-        <CategorySelect value={categoryId} onChange={setCategoryId} />
-      </div>
-      <div className="field">
-        <label>题库（不选则归默认题库）</label>
-        <select value={bankId ?? ""} onChange={(e) => setBankId(e.target.value ? Number(e.target.value) : null)}>
-          <option value="">默认题库</option>
-          {banks.map((b) => (
-            <option key={b.id} value={b.id}>{b.name}</option>
-          ))}
-        </select>
-      </div>
-      <button className="btn block" disabled={saving} onClick={submit}>
-        存入预览区
-      </button>
-      {msg && <div className={`form-msg${msg.err ? " err" : ""}`}>{msg.text}</div>}
+      <QuestionFields value={value} onChange={update} />
+      <div className="field"><label>分类（可选）</label><CategorySelect value={value.category_id ?? null} onChange={(category_id) => update({ category_id })} /></div>
+      <div className="field"><label>题库（不选则归默认题库）</label><select value={value.bank_id ?? ""} onChange={(event) => update({ bank_id: event.target.value ? Number(event.target.value) : null })}><option value="">默认题库</option>{banks.map((bank) => <option key={bank.id} value={bank.id}>{bank.name}</option>)}</select></div>
+      <Button block loading={saving} onClick={submit}>存入待确认</Button>
+      {msg && <div className={`form-msg${msg.err ? " err" : ""}`} role={msg.err ? "alert" : "status"}>{msg.text}</div>}
     </>
   );
 }

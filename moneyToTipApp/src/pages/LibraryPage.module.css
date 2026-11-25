@@ -1,0 +1,14 @@
+.page { width: min(100%, 860px); margin: 0 auto; padding: 24px 18px 36px; }
+.header { display: flex; align-items: end; justify-content: space-between; margin-bottom: 22px; }
+.header p { margin: 0 0 5px; color: var(--color-accent); font-size: 11px; letter-spacing: .12em; }
+.header h1 { margin: 0; font-family: var(--font-display); font-size: 34px; }
+.header > span { color: var(--color-muted); }
+.toolbar { display: grid; grid-template-columns: minmax(0, 1fr) 130px; gap: 10px; }
+.toolbar input, .toolbar select { width: 100%; min-height: 46px; padding: 10px 12px; border: 1.5px solid var(--color-line); border-radius: 10px; background: var(--color-surface); color: var(--color-ink); font: inherit; }
+.hint { color: var(--color-muted); font-size: 12px; line-height: 1.6; }
+.notice { display: flex; align-items: center; justify-content: space-between; margin: 12px 0; padding: 10px 12px; border-left: 3px solid var(--color-success); background: var(--color-surface); color: var(--color-success); }
+.notice button { width: 44px; height: 44px; border: 0; background: transparent; color: inherit; font-size: 20px; }
+.pagination { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 18px; color: var(--color-muted); font-size: 13px; }
+.pagination button { min-height: 44px; border: 0; background: transparent; color: var(--color-ink); cursor: pointer; }
+.pagination button:disabled { opacity: .35; }
+@media (max-width: 420px) { .toolbar { grid-template-columns: 1fr 108px; } }

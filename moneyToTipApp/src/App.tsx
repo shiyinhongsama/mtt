@@ -5,7 +5,7 @@ import AppShell from "./components/AppShell";
 import AddPage from "./pages/AddPage";
 import LoginPage from "./pages/LoginPage";
 import MePage from "./pages/MePage";
-import PendingPage from "./pages/PendingPage";
+import LibraryPage from "./pages/LibraryPage";
 import PlansPage from "./pages/PlansPage";
 import ReviewPage from "./pages/ReviewPage";
 import StatsPage from "./pages/StatsPage";
@@ -47,7 +47,7 @@ export default function App() {
         <Route path="/review" element={<ReviewPage />} />
         <Route path="/plans" element={<PlansPage />} />
         <Route path="/add" element={<AddPage />} />
-        <Route path="/library" element={<PendingPage />} />
+        <Route path="/library" element={<LibraryPage />} />
         <Route path="/pending" element={<Navigate to="/library" replace />} />
         <Route path="/stats" element={<StatsPage />} />
         <Route path="/insights" element={<StatsPage />} />

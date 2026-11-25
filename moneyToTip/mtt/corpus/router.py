@@ -11,9 +11,11 @@ from sqlmodel import Session, func, or_, select
 
 from mtt.corpus.models import Category, Question, QuestionBank
 from mtt.corpus.service import create_question, ensure_default_bank, to_dict
+from mtt.corpus.validation import validate_question
 from mtt.db import get_session
 from mtt.deps import get_current_user
 from mtt.identity.models import User
+from mtt.schedule.models import ReviewLog
 
 router = APIRouter(prefix="/questions", tags=["corpus"])
 
@@ -204,6 +206,30 @@ def add_question(payload: QuestionCreate, user: User = Depends(get_current_user)
     return to_dict(q)
 
 
+@router.post("/bulk-confirm")
+def bulk_confirm(payload: dict[str, list[int]], user: User = Depends(get_current_user),
+                 session: Session = Depends(get_session)) -> dict:
+    confirmed: list[int] = []
+    failures: list[dict] = []
+    for question_id in dict.fromkeys(payload.get("ids", [])):
+        question = session.get(Question, question_id)
+        if question is None or question.owner_id != user.id:
+            failures.append({"id": question_id, "reason": "题目不存在"})
+            continue
+        if question.status != "pending":
+            failures.append({"id": question_id, "reason": "仅待确认题目可确认"})
+            continue
+        errors = validate_question(question)
+        if errors:
+            failures.append({"id": question_id, "reason": "；".join(errors)})
+            continue
+        question.status = "active"
+        session.add(question)
+        confirmed.append(question_id)
+    session.commit()
+    return {"confirmed_ids": confirmed, "failures": failures}
+
+
 @router.get("/{question_id}")
 def get_question(question_id: int, user: User = Depends(get_current_user),
                  session: Session = Depends(get_session)) -> dict:
@@ -220,6 +246,10 @@ def update_question(question_id: int, payload: QuestionUpdate,
         if field in ("options", "tags") and value is not None:
             value = json.dumps(value, ensure_ascii=False)
         setattr(q, field, value)
+    errors = validate_question(q)
+    if errors:
+        session.rollback()
+        raise HTTPException(422, "；".join(errors))
     session.add(q)
     session.commit()
     session.refresh(q)
@@ -230,6 +260,10 @@ def update_question(question_id: int, payload: QuestionUpdate,
 def delete_question(question_id: int, user: User = Depends(get_current_user),
                     session: Session = Depends(get_session)) -> None:
     q = _get_owned(session, user, question_id)
+    history = session.exec(select(ReviewLog).where(
+        ReviewLog.user_id == user.id, ReviewLog.question_id == question_id)).first()
+    if history is not None:
+        raise HTTPException(409, "题目已有学习记录，请使用 /suspend 暂停，保留历史")
     session.delete(q)
     session.commit()
 
@@ -241,6 +275,9 @@ def confirm_question(question_id: int, user: User = Depends(get_current_user),
     q = _get_owned(session, user, question_id)
     if q.status != "pending":
         raise HTTPException(409, f"cannot confirm question in status '{q.status}'")
+    errors = validate_question(q)
+    if errors:
+        raise HTTPException(422, "；".join(errors))
     q.status = "active"
     session.add(q)
     session.commit()
