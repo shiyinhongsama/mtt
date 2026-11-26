@@ -1,6 +1,6 @@
 # Study Plans Implementation Plan
 
-> **状态：** 已于 2026-11-26 完成全部 7 项任务与交付验收（后端 83 项、学习端组件 54 项、管理端 3 项、E2E 4 项通过，学习端生产构建成功）。本文保留为实施和验收记录，不再作为待执行计划。
+> **状态：** 已于 2026-11-26 完成全部 8 项任务与交付验收（后端 83 项、学习端组件 59 项、管理端 3 项、E2E 4 项通过，学习端生产构建成功）。本文保留为实施和验收记录，不再作为待执行计划。
 
 **Goal:** 让每个学习计划在今日页可见、可进入、独立计进度，并修复「完成的复习会话被重放」的缺陷。
 
@@ -190,3 +190,26 @@ cd ../moneyToTipApp && npm test && npm run build
 
 - [x] **Step 2: 更新 README 与文档状态，勾选已完成步骤**
 - [x] **Step 3: 重新构建 App，供本地运行实例直接使用**
+
+---
+
+### Task 8: 续接的会话不得顶掉计划入口（用户反馈）
+
+用户建了三个计划后，每个计划进去都是同一批题、进度也一样。排查结论：上午没做完的自由复习留在本地快照里，从任何计划卡片进入都被原样恢复，服务器一次拉题请求都没收到。
+
+**Files:**
+- Modify: `moneyToTipApp/src/features/review/snapshot.ts`
+- Modify: `moneyToTipApp/src/features/review/useReviewSession.ts`
+- Test: `moneyToTipApp/src/features/review/snapshot.test.ts`
+- Test: `moneyToTipApp/src/pages/ReviewPage.test.tsx`
+- Test: `moneyToTipApp/e2e/study-plans.spec.ts`
+
+- [x] **Step 1: 写复现测试**
+
+单元测试三例：加载态不写入、加载中快照被丢弃、从另一个入口进入时开始请求的计划而不是续接旧会话；另加两例保住既有行为：同一计划续接不重新拉题、未保存的作答优先恢复。端到端用例开头先留下一轮没做完的自由复习，再进入计划。
+
+- [x] **Step 2: 快照只续接同一入口**
+
+- [x] **Step 3: 回归**
+
+学习端组件 59 项、E2E 4 项通过，端到端用例在修复前稳定复现用户看到的题目。
