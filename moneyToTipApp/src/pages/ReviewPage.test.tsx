@@ -6,6 +6,8 @@ import { afterEach, expect, it, vi } from "vitest";
 import { setToken } from "../api/client";
 import type { DueQuestion } from "../api/types";
 import { dueQuestion } from "../test/factories";
+import { initialReviewSession, reviewReducer } from "../features/review/session";
+import { saveReviewSnapshot } from "../features/review/snapshot";
 import ReviewPage from "./ReviewPage";
 
 afterEach(() => {
@@ -253,6 +255,51 @@ it("keeps loading instead of calling an unusable queue a finished session", asyn
   await waitFor(() => expect(calls.dueUrls).toHaveLength(1));
   expect(screen.getByRole("status", { name: "载入中" })).toBeVisible();
   expect(screen.queryByText("这轮复习完成了")).not.toBeInTheDocument();
+});
+
+it("starts the requested plan instead of resuming a session from another entry", async () => {
+  setToken("valid");
+  // 上一次没做完的自由复习还留在本地
+  const leftover = reviewReducer(initialReviewSession, {
+    type: "QUEUE_LOADED", queue: [dueQuestion(1)], planId: null, now: 100,
+  });
+  saveReviewSnapshot(4, leftover);
+  const calls = stubReviewApi();
+  renderPage("/review?plan=8");
+
+  expect(await screen.findByText("测试题目 3")).toBeVisible();
+  expect(screen.queryByText("测试题目 1")).not.toBeInTheDocument();
+  expect(calls.dueUrls).toEqual(["/api/v1/reviews/due?limit=10"]);
+});
+
+it("resumes the same plan's unfinished session without fetching again", async () => {
+  setToken("valid");
+  const unfinished = reviewReducer(initialReviewSession, {
+    type: "QUEUE_LOADED", queue: [dueQuestion(1), dueQuestion(2)], planId: 8, now: 100,
+  });
+  saveReviewSnapshot(4, unfinished);
+  const calls = stubReviewApi();
+  renderPage("/review?plan=8");
+
+  expect(await screen.findByText("测试题目 1")).toBeVisible();
+  expect(screen.getByText("第二个计划")).toBeVisible();
+  expect(calls.dueUrls).toHaveLength(0);
+});
+
+it("brings back an unsaved result before starting the requested plan", async () => {
+  setToken("valid");
+  let interrupted = reviewReducer(initialReviewSession, {
+    type: "QUEUE_LOADED", queue: [dueQuestion(1)], planId: null, now: 100,
+  });
+  interrupted = reviewReducer(interrupted, { type: "ANSWER_REVEALED", answer: "我的答案" });
+  interrupted = reviewReducer(interrupted, { type: "RATE", rating: "good", clientId: "unsaved-key", now: 200 });
+  saveReviewSnapshot(4, interrupted);
+  const calls = stubReviewApi();
+  renderPage("/review?plan=8");
+
+  expect(await screen.findByText("结果尚未保存")).toBeVisible();
+  expect(screen.getByText("测试题目 1")).toBeVisible();
+  expect(calls.dueUrls).toHaveLength(0);
 });
 
 

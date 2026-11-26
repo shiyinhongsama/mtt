@@ -4,7 +4,7 @@ import { api } from "../../api/client";
 import type { DueQuestion, Plan, Rating, UserInfo } from "../../api/types";
 import { submitReview } from "./api";
 import { initialReviewSession, reviewReducer } from "./session";
-import { loadReviewSnapshot, saveReviewSnapshot } from "./snapshot";
+import { clearReviewSnapshot, loadReviewSnapshot, saveReviewSnapshot } from "./snapshot";
 
 type Identity = Pick<UserInfo, "id" | "username" | "role">;
 
@@ -33,26 +33,34 @@ export default function useReviewSession(categoryId: number | null, bankId: numb
   });
   const userId = identity.data?.id;
   const activeIds = active.data?.plan_ids ?? [];
-  const plan = planId !== null && activeIds.includes(planId)
+  const requestedPlan = planId !== null && activeIds.includes(planId)
     ? plans.data?.find((item) => item.id === planId) ?? null
     : null;
   // 目标是完成今日目标，不是清空到期题；接口单次最多 100 题
-  const limit = plan && !plan.goal_met
-    ? Math.min(MAX_DUE_LIMIT, Math.max(1, plan.daily_goal - plan.today_done))
+  const limit = requestedPlan && !requestedPlan.goal_met
+    ? Math.min(MAX_DUE_LIMIT, Math.max(1, requestedPlan.daily_goal - requestedPlan.today_done))
     : FREE_SESSION_SIZE;
-  const effectiveBankId = plan?.bank_id ?? bankId;
+  const effectiveBankId = requestedPlan?.bank_id ?? bankId;
 
   useEffect(() => {
-    if (userId === undefined || restoredUser === userId) return;
+    if (userId === undefined) return;
+    // 换了入口（比如从今日页点了另一个计划）就是新一轮，同一入口才续上之前的会话；
+    // 没保存成功的作答例外，不能让它悄悄丢掉
     const saved = loadReviewSnapshot(userId);
-    restoredSnapshot.current = saved !== null;
-    if (saved) dispatch({ type: "RESTORE", state: saved });
-    else dispatch({ type: "RESET" });
+    const unsaved = saved !== null && (saved.phase === "submitting" || saved.phase === "failed");
+    restoredSnapshot.current = saved !== null && (unsaved || saved.planId === planId);
+    queueLoaded.current = false;
+    if (restoredSnapshot.current && saved) {
+      dispatch({ type: "RESTORE", state: saved });
+    } else {
+      if (saved) clearReviewSnapshot();
+      dispatch({ type: "RESET" });
+    }
     setRestoredUser(userId);
-  }, [restoredUser, userId]);
+  }, [userId, planId]);
 
   const due = useQuery({
-    queryKey: ["reviews", "due", categoryId, effectiveBankId, plan?.id ?? null, limit],
+    queryKey: ["reviews", "due", categoryId, effectiveBankId, requestedPlan?.id ?? null, limit],
     queryFn: () => {
       const params = new URLSearchParams({ limit: String(limit) });
       if (categoryId) params.set("category_id", String(categoryId));
@@ -69,8 +77,8 @@ export default function useReviewSession(categoryId: number | null, bankId: numb
     if (restoredSnapshot.current || queueLoaded.current) return;
     if (!due.data || due.isError || due.isFetching || !due.isFetchedAfterMount) return;
     queueLoaded.current = true;
-    dispatch({ type: "QUEUE_LOADED", queue: due.data, planId: plan?.id ?? null, now: Date.now() });
-  }, [due.data, due.isError, due.isFetching, due.isFetchedAfterMount, plan?.id]);
+    dispatch({ type: "QUEUE_LOADED", queue: due.data, planId: requestedPlan?.id ?? null, now: Date.now() });
+  }, [due.data, due.isError, due.isFetching, due.isFetchedAfterMount, requestedPlan?.id]);
 
   useEffect(() => {
     if (userId !== undefined && restoredUser === userId) saveReviewSnapshot(userId, state);
@@ -101,7 +109,8 @@ export default function useReviewSession(categoryId: number | null, bankId: numb
     due,
     plans,
     active,
-    plan,
+    // 标题栏跟的是会话自己的计划：续上的可能是另一个入口没存完的那一轮
+    plan: state.planId === null ? null : plans.data?.find((item) => item.id === state.planId) ?? null,
     answer: (answer: string) => dispatch({ type: "ANSWER_REVEALED", answer }),
     rate: (rating: Rating) => dispatch({ type: "RATE", rating, clientId: crypto.randomUUID(), now: Date.now() }),
     retry: () => dispatch({ type: "RETRY" }),

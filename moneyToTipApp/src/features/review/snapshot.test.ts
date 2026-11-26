@@ -56,6 +56,19 @@ describe("review snapshots", () => {
     expect(localStorage.getItem("mtt_review_snapshot_v2")).toBeNull();
   });
 
+  it("never persists a session that has not loaded", () => {
+    saveReviewSnapshot(4, initialReviewSession);
+
+    expect(localStorage.getItem("mtt_review_snapshot_v2")).toBeNull();
+  });
+
+  it("drops a leftover loading snapshot", () => {
+    localStorage.setItem("mtt_review_snapshot_v2", JSON.stringify({ version: 2, userId: 4, state: initialReviewSession }));
+
+    expect(loadReviewSnapshot(4)).toBeNull();
+    expect(localStorage.getItem("mtt_review_snapshot_v2")).toBeNull();
+  });
+
   it("rejects malformed or structurally invalid snapshots", () => {
     localStorage.setItem("mtt_review_snapshot_v2", "not-json");
     expect(loadReviewSnapshot(4)).toBeNull();

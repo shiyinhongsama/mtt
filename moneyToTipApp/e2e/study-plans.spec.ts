@@ -21,6 +21,12 @@ test("两个学习计划各完成一轮：进度独立，第二轮不会重放�
   await login(page);
   await createSampleAndOpenToday(page);
 
+  // 上一轮没做完的自由复习会留在本地，不能让它顶掉接下来每个计划自己的题
+  await page.getByRole("button", { name: "继续今日复习" }).click();
+  await expect(page.getByText("根据艾宾浩斯遗忘规律，哪种复习方式更合理？", { exact: true })).toBeVisible();
+  await page.getByRole("link", { name: "退出本轮复习" }).click();
+  await expect(page.getByRole("button", { name: "继续今日复习" })).toBeVisible();
+
   // 示例题库之外再建一个题库，两个题库各建一个每天 2 题的计划并加入今日
   const banks = (await (await api(page, "/questions/banks")).json()) as { id: number; name: string }[];
   const sampleBank = banks.find((bank) => bank.name === "忙里偷题示例");
