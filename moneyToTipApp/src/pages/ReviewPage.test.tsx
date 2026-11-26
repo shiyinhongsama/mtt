@@ -1,5 +1,5 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, expect, it, vi } from "vitest";
@@ -234,6 +234,25 @@ it("offers a retry when today's plans cannot load", async () => {
 
   expect(await screen.findByText("测试题目 3")).toBeVisible();
   expect(calls.dueUrls).toEqual(["/api/v1/reviews/due?limit=10"]);
+});
+
+it("keeps loading instead of calling an unusable queue a finished session", async () => {
+  setToken("valid");
+  const question = dueQuestion(3);
+  const calls = stubReviewApi({ question });
+  const base = vi.mocked(fetch).getMockImplementation()!;
+  vi.mocked(fetch).mockImplementation(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url.startsWith("/api/v1/reviews/due")) {
+      calls.dueUrls.push(url);
+      return Response.json(null);
+    }    return base(input, init);
+  });
+  renderPage("/review");
+
+  await waitFor(() => expect(calls.dueUrls).toHaveLength(1));
+  expect(screen.getByRole("status", { name: "载入中" })).toBeVisible();
+  expect(screen.queryByText("这轮复习完成了")).not.toBeInTheDocument();
 });
 
 

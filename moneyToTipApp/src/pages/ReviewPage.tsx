@@ -33,11 +33,12 @@ export default function ReviewPage() {
   if ((plans.isError || active.isError) && !current) {
     return <main className={styles.page}><ErrorState message={(plans.error ?? active.error)?.message ?? "暂时无法加载"} onRetry={() => { plans.refetch(); active.refetch(); }} /></main>;
   }
-  if ((identity.isLoading || plans.isLoading || active.isLoading || (state.phase === "loading" && due.isLoading)) && !current) {
-    return <main className={styles.page}><Skeleton lines={5} /></main>;
-  }
   if (due.isError && !current) {
     return <main className={styles.page}><ErrorState message={due.error.message} onRetry={reload} /></main>;
+  }
+  // 队列还没建立就一直是加载态，不能把「没题」当成「已完成」
+  if (state.phase === "loading") {
+    return <main className={styles.page}><Skeleton lines={5} /></main>;
   }
   if (!current || state.phase === "complete") {
     return (
