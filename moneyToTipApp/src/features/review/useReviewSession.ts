@@ -12,6 +12,7 @@ export default function useReviewSession(categoryId: number | null, bankId: numb
   const [state, dispatch] = useReducer(reviewReducer, initialReviewSession);
   const [restoredUser, setRestoredUser] = useState<number | null>(null);
   const restoredSnapshot = useRef(false);
+  const queueLoaded = useRef(false);
   const activeSubmission = useRef<string | null>(null);
   const identity = useQuery({ queryKey: ["identity", "me"], queryFn: () => api<Identity>("/identity/me"), retry: false });
   const plans = useQuery({
@@ -54,10 +55,13 @@ export default function useReviewSession(categoryId: number | null, bankId: numb
   });
 
   useEffect(() => {
-    if (due.data) {
-      dispatch({ type: "QUEUE_LOADED", queue: due.data, planId: selectedPlan?.id ?? null, now: Date.now() });
-    }
-  }, [due.data, selectedPlan?.id]);
+    // 只认挂载后新拉取且已稳定的结果：缓存里的旧队列不能重建一次已完成的复习，
+    // 后台刷新也不能重置进行中的会话
+    if (restoredSnapshot.current || queueLoaded.current) return;
+    if (!due.data || due.isError || due.isFetching || !due.isFetchedAfterMount) return;
+    queueLoaded.current = true;
+    dispatch({ type: "QUEUE_LOADED", queue: due.data, planId: selectedPlan?.id ?? null, now: Date.now() });
+  }, [due.data, due.isError, due.isFetching, due.isFetchedAfterMount, selectedPlan?.id]);
 
   useEffect(() => {
     if (userId !== undefined && restoredUser === userId) saveReviewSnapshot(userId, state);

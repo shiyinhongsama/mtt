@@ -28,6 +28,11 @@ export function loadReviewSnapshot(userId: number): ReviewSessionState | null {
       localStorage.removeItem(SNAPSHOT_KEY);
       return null;
     }
+    // 已完成的会话没有可恢复的内容，留着只会挡住下一轮
+    if (snapshot.state.phase === "complete") {
+      localStorage.removeItem(SNAPSHOT_KEY);
+      return null;
+    }
     return snapshot.state;
   } catch {
     localStorage.removeItem(SNAPSHOT_KEY);
@@ -36,6 +41,10 @@ export function loadReviewSnapshot(userId: number): ReviewSessionState | null {
 }
 
 export function saveReviewSnapshot(userId: number, state: ReviewSessionState): void {
+  if (state.phase === "complete") {
+    clearReviewSnapshot();
+    return;
+  }
   const snapshot: ReviewSnapshot = { version: 2, userId, state };
   localStorage.setItem(SNAPSHOT_KEY, JSON.stringify(snapshot));
 }

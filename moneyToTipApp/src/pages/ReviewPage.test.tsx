@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter } from "react-router-dom";
+import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, expect, it, vi } from "vitest";
 import { setToken } from "../api/client";
 import { dueQuestion } from "../test/factories";
@@ -79,6 +79,63 @@ it("keeps the question on failure, retries the same key, then advances", async (
 
   await user.click(screen.getByRole("button", { name: "下一题" }));
   expect(screen.getByText("测试题目 2")).toBeVisible();
+});
+
+it("fetches a new queue instead of replaying the finished session", async () => {
+  setToken("valid");
+  const user = userEvent.setup();
+  const first = dueQuestion(1);
+  const second = dueQuestion(2);
+  let dueRequests = 0;
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url === "/api/v1/identity/me") {
+      return Response.json({ id: 4, username: "tester", role: "user" });
+    }
+    if (url === "/api/v1/plans") return Response.json([]);
+    if (url === "/api/v1/plans/active") return Response.json({ plan_ids: [] });
+    if (url.startsWith("/api/v1/reviews/due")) {
+      dueRequests += 1;
+      return Response.json(dueRequests === 1 ? [first] : [second]);
+    }
+    if (url === "/api/v1/reviews" && init?.method === "POST") {
+      return new Response(JSON.stringify({
+        log_id: 9,
+        idempotent: false,
+        state: first.state,
+        decision: { interval_minutes: 480, due_at: "2026-11-25T08:00:00Z", algorithm_version: "ebbinghaus-v1" },
+      }), { status: 201, headers: { "Content-Type": "application/json" } });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  }));
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <MemoryRouter initialEntries={["/review"]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+        <Routes>
+          <Route path="/review" element={<ReviewPage />} />
+          <Route path="/today" element={<Link to="/review">再去复习</Link>} />
+        </Routes>
+      </MemoryRouter>
+    </QueryClientProvider>,
+  );
+
+  expect(await screen.findByText("测试题目 1")).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "心里想好答案了，对照标准答案" }));
+  await user.click(screen.getByRole("button", { name: /记得/ }));
+  expect(await screen.findByRole("button", { name: "下一题" })).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "下一题" }));
+  expect(await screen.findByText("这轮复习完成了")).toBeVisible();
+
+  // 和真实操作一致：返回今日，再从今日重新进入复习
+  await user.click(screen.getByRole("link", { name: "返回今日" }));
+  await user.click(screen.getByRole("link", { name: "再去复习" }));
+
+  expect(await screen.findByText("测试题目 2")).toBeVisible();
+  expect(screen.queryByText("测试题目 1")).not.toBeInTheDocument();
+  expect(dueRequests).toBe(2);
 });
 
 
