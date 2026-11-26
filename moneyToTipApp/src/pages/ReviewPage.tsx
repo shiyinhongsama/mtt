@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useSearchParams } from "react-router-dom";
 import AnswerArea from "../components/AnswerArea";
 import ExplainPanel from "../components/ExplainPanel";
 import FeedbackPanel from "../components/FeedbackPanel";
@@ -10,7 +10,9 @@ import useReviewSession from "../features/review/useReviewSession";
 import styles from "./ReviewPage.module.css";
 
 export default function ReviewPage() {
-  const { state, identity, due, answer, rate, retry, next, reload, activePlan } = useReviewSession(null, null);
+  const [params] = useSearchParams();
+  const planId = Number(params.get("plan")) || null;
+  const { state, identity, due, plans, active, plan, answer, rate, retry, next, reload } = useReviewSession(null, null, planId);
   const [askOpen, setAskOpen] = useState(false);
   const current = state.current;
 
@@ -28,7 +30,10 @@ export default function ReviewPage() {
   }, [next, rate, state.phase]);
 
   if (identity.isError) return <ErrorState message={identity.error.message} onRetry={() => identity.refetch()} />;
-  if ((identity.isLoading || (state.phase === "loading" && due.isLoading)) && !current) {
+  if ((plans.isError || active.isError) && !current) {
+    return <main className={styles.page}><ErrorState message={(plans.error ?? active.error)?.message ?? "暂时无法加载"} onRetry={() => { plans.refetch(); active.refetch(); }} /></main>;
+  }
+  if ((identity.isLoading || plans.isLoading || active.isLoading || (state.phase === "loading" && due.isLoading)) && !current) {
     return <main className={styles.page}><Skeleton lines={5} /></main>;
   }
   if (due.isError && !current) {
@@ -38,8 +43,8 @@ export default function ReviewPage() {
     return (
       <main className={styles.page}>
         <EmptyState
-          title="这轮复习完成了"
-          description="没有更多到期题。新的复习会按你的真实评分在合适的时间出现。"
+          title={plan ? `「${plan.name}」这一轮完成了` : "这轮复习完成了"}
+          description={plan ? "回到今日查看这个计划的进度，再开始下一个计划。" : "没有更多到期题。新的复习会按你的真实评分在合适的时间出现。"}
           action={<Link to="/today"><Button variant="secondary">返回今日</Button></Link>}
         />
       </main>
@@ -52,7 +57,7 @@ export default function ReviewPage() {
         <Link to="/today" className={styles.exit} aria-label="退出本轮复习">←</Link>
         <div>
           <strong>专注复习</strong>
-          <span>{activePlan ? activePlan.name : "按记忆状态，逐题巩固"}</span>
+          <span>{plan ? plan.name : "按记忆状态，逐题巩固"}</span>
         </div>
         <span className={styles.count}>{state.queue.length} 题</span>
       </header>

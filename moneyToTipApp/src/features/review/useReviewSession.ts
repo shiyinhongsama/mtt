@@ -8,7 +8,11 @@ import { loadReviewSnapshot, saveReviewSnapshot } from "./snapshot";
 
 type Identity = Pick<UserInfo, "id" | "username" | "role">;
 
-export default function useReviewSession(categoryId: number | null, bankId: number | null) {
+const FREE_SESSION_SIZE = 20;
+const MAX_DUE_LIMIT = 100;
+
+/** planId 指向今日计划中的计划时，本轮只服务这个计划；否则是自由模式 */
+export default function useReviewSession(categoryId: number | null, bankId: number | null, planId: number | null = null) {
   const [state, dispatch] = useReducer(reviewReducer, initialReviewSession);
   const [restoredUser, setRestoredUser] = useState<number | null>(null);
   const restoredSnapshot = useRef(false);
@@ -28,8 +32,15 @@ export default function useReviewSession(categoryId: number | null, bankId: numb
     retry: false,
   });
   const userId = identity.data?.id;
-  const selectedPlan = plans.data?.find((plan) => active.data?.plan_ids.includes(plan.id)) ?? null;
-  const effectiveBankId = selectedPlan?.bank_id ?? bankId;
+  const activeIds = active.data?.plan_ids ?? [];
+  const plan = planId !== null && activeIds.includes(planId)
+    ? plans.data?.find((item) => item.id === planId) ?? null
+    : null;
+  // 目标是完成今日目标，不是清空到期题；接口单次最多 100 题
+  const limit = plan && !plan.goal_met
+    ? Math.min(MAX_DUE_LIMIT, Math.max(1, plan.daily_goal - plan.today_done))
+    : FREE_SESSION_SIZE;
+  const effectiveBankId = plan?.bank_id ?? bankId;
 
   useEffect(() => {
     if (userId === undefined || restoredUser === userId) return;
@@ -41,11 +52,9 @@ export default function useReviewSession(categoryId: number | null, bankId: numb
   }, [restoredUser, userId]);
 
   const due = useQuery({
-    queryKey: ["reviews", "due", categoryId, effectiveBankId, selectedPlan?.id ?? null],
+    queryKey: ["reviews", "due", categoryId, effectiveBankId, plan?.id ?? null, limit],
     queryFn: () => {
-      const params = new URLSearchParams({
-        limit: String(selectedPlan ? Math.max(1, selectedPlan.daily_goal - selectedPlan.today_done) : 20),
-      });
+      const params = new URLSearchParams({ limit: String(limit) });
       if (categoryId) params.set("category_id", String(categoryId));
       if (effectiveBankId) params.set("bank_id", String(effectiveBankId));
       return api<DueQuestion[]>(`/reviews/due?${params}`);
@@ -60,8 +69,8 @@ export default function useReviewSession(categoryId: number | null, bankId: numb
     if (restoredSnapshot.current || queueLoaded.current) return;
     if (!due.data || due.isError || due.isFetching || !due.isFetchedAfterMount) return;
     queueLoaded.current = true;
-    dispatch({ type: "QUEUE_LOADED", queue: due.data, planId: selectedPlan?.id ?? null, now: Date.now() });
-  }, [due.data, due.isError, due.isFetching, due.isFetchedAfterMount, selectedPlan?.id]);
+    dispatch({ type: "QUEUE_LOADED", queue: due.data, planId: plan?.id ?? null, now: Date.now() });
+  }, [due.data, due.isError, due.isFetching, due.isFetchedAfterMount, plan?.id]);
 
   useEffect(() => {
     if (userId !== undefined && restoredUser === userId) saveReviewSnapshot(userId, state);
@@ -90,11 +99,13 @@ export default function useReviewSession(categoryId: number | null, bankId: numb
     state,
     identity,
     due,
+    plans,
+    active,
+    plan,
     answer: (answer: string) => dispatch({ type: "ANSWER_REVEALED", answer }),
     rate: (rating: Rating) => dispatch({ type: "RATE", rating, clientId: crypto.randomUUID(), now: Date.now() }),
     retry: () => dispatch({ type: "RETRY" }),
     next: () => dispatch({ type: "NEXT", now: Date.now() }),
     reload: () => due.refetch(),
-    activePlan: selectedPlan,
   };
 }

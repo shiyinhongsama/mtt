@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { Link, MemoryRouter, Route, Routes } from "react-router-dom";
 import { afterEach, expect, it, vi } from "vitest";
 import { setToken } from "../api/client";
+import type { DueQuestion } from "../api/types";
 import { dueQuestion } from "../test/factories";
 import ReviewPage from "./ReviewPage";
 
@@ -12,17 +13,57 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
-function renderPage() {
+function renderPage(route = "/") {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
   });
   return render(
     <QueryClientProvider client={client}>
-      <MemoryRouter future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
+      <MemoryRouter initialEntries={[route]} future={{ v7_startTransition: true, v7_relativeSplatPath: true }}>
         <ReviewPage />
       </MemoryRouter>
     </QueryClientProvider>,
   );
+}
+
+const planRows = [
+  { id: 7, name: "第一个计划", bank_id: 3, daily_goal: 5, today_done: 1, goal_met: false, created_at: "2026-11-25" },
+  { id: 8, name: "第二个计划", bank_id: null, daily_goal: 10, today_done: 0, goal_met: false, created_at: "2026-11-25" },
+  { id: 9, name: "已达成的计划", bank_id: 3, daily_goal: 5, today_done: 5, goal_met: true, created_at: "2026-11-25" },
+];
+
+/** 复习页依赖的接口桩：记录拉题地址和提交体 */
+function stubReviewApi({
+  plans = planRows, active = [7, 8, 9], question = dueQuestion(3), failPlansOnce = false,
+}: { plans?: unknown[]; active?: number[]; question?: DueQuestion; failPlansOnce?: boolean } = {}) {
+  const calls = { dueUrls: [] as string[], bodies: [] as Record<string, unknown>[] };
+  let planRequests = 0;
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+    const url = String(input);
+    if (url === "/api/v1/identity/me") return Response.json({ id: 4, username: "tester", role: "user" });
+    if (url === "/api/v1/plans") {
+      planRequests += 1;
+      return failPlansOnce && planRequests === 1
+        ? new Response(JSON.stringify({ detail: "服务暂不可用" }), { status: 500, headers: { "Content-Type": "application/json" } })
+        : Response.json(plans);
+    }
+    if (url === "/api/v1/plans/active") return Response.json({ plan_ids: active });
+    if (url.startsWith("/api/v1/reviews/due")) {
+      calls.dueUrls.push(url);
+      return Response.json([question]);
+    }
+    if (url === "/api/v1/reviews" && init?.method === "POST") {
+      calls.bodies.push(JSON.parse(String(init.body)) as Record<string, unknown>);
+      return new Response(JSON.stringify({
+        log_id: 9,
+        idempotent: false,
+        state: question.state,
+        decision: { interval_minutes: 480, due_at: "2026-11-25T08:00:00Z", algorithm_version: "ebbinghaus-v1" },
+      }), { status: 201, headers: { "Content-Type": "application/json" } });
+    }
+    throw new Error(`Unexpected request: ${url}`);
+  }));
+  return calls;
 }
 
 it("keeps the question on failure, retries the same key, then advances", async () => {
@@ -136,6 +177,63 @@ it("fetches a new queue instead of replaying the finished session", async () => 
   expect(await screen.findByText("测试题目 2")).toBeVisible();
   expect(screen.queryByText("测试题目 1")).not.toBeInTheDocument();
   expect(dueRequests).toBe(2);
+});
+
+it("binds the session to the plan named in the URL, not the first active plan", async () => {
+  setToken("valid");
+  const user = userEvent.setup();
+  const calls = stubReviewApi();
+  renderPage("/review?plan=8");
+
+  expect(await screen.findByText("测试题目 3")).toBeVisible();
+  expect(screen.getByText("第二个计划")).toBeVisible();
+  expect(calls.dueUrls).toEqual(["/api/v1/reviews/due?limit=10"]);
+
+  await user.click(screen.getByRole("button", { name: "心里想好答案了，对照标准答案" }));
+  await user.click(screen.getByRole("button", { name: /记得/ }));
+  expect(await screen.findByRole("button", { name: "下一题" })).toBeVisible();
+  expect(calls.bodies[0].plan_id).toBe(8);
+});
+
+it("reviews beyond the goal inside the plan bank when the plan is already met", async () => {
+  setToken("valid");
+  const calls = stubReviewApi();
+  renderPage("/review?plan=9");
+
+  expect(await screen.findByText("测试题目 3")).toBeVisible();
+  expect(calls.dueUrls).toEqual(["/api/v1/reviews/due?limit=20&bank_id=3"]);
+});
+
+it("starts a free session when the URL names no plan", async () => {
+  setToken("valid");
+  const calls = stubReviewApi();
+  renderPage("/review");
+
+  expect(await screen.findByText("测试题目 3")).toBeVisible();
+  expect(screen.getByText("按记忆状态，逐题巩固")).toBeVisible();
+  expect(calls.dueUrls).toEqual(["/api/v1/reviews/due?limit=20"]);
+});
+
+it("treats a plan outside today's list as a free session", async () => {
+  setToken("valid");
+  const calls = stubReviewApi();
+  renderPage("/review?plan=99");
+
+  expect(await screen.findByText("测试题目 3")).toBeVisible();
+  expect(calls.dueUrls).toEqual(["/api/v1/reviews/due?limit=20"]);
+});
+
+it("offers a retry when today's plans cannot load", async () => {
+  setToken("valid");
+  const user = userEvent.setup();
+  const calls = stubReviewApi({ failPlansOnce: true });
+  renderPage("/review?plan=8");
+
+  expect(await screen.findByText("服务暂不可用")).toBeVisible();
+  await user.click(screen.getByRole("button", { name: "重试" }));
+
+  expect(await screen.findByText("测试题目 3")).toBeVisible();
+  expect(calls.dueUrls).toEqual(["/api/v1/reviews/due?limit=10"]);
 });
 
 
