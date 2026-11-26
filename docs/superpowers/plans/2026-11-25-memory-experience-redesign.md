@@ -1,6 +1,6 @@
 # Memory Experience Redesign Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **状态：** 已于 2026-11-26 完成全部 10 项任务与发布验收。本文保留为实施和验收记录，不再作为待执行计划。
 
 **Goal:** 在已完成的可靠复习 API 与 `ebbinghaus-v1` 记忆引擎之上，交付移动端优先、失败可恢复、排期可解释的完整学习体验。
 
@@ -808,7 +808,7 @@ npm install -D @playwright/test
 npx playwright install chromium
 ```
 
-配置 `webServer` 启动专用 FastAPI 测试库和 Vite 测试实例；每个测试使用独立 SQLite 文件，禁止连接开发数据库。脚本：
+由 `e2e/fixtures.ts` 为每个测试启动独立的 FastAPI 与 Vite 实例，使用动态端口和独立临时 SQLite，并在 `finally` 中清理进程；禁止连接开发数据库。脚本：
 
 ```json
 {
@@ -868,4 +868,9 @@ git commit -m "test: verify complete memory learning experience"
 - 管理端真实路由和按需加载：Task 9。
 - 全量后端、组件、E2E、三视口视觉验收：Task 10。
 
-完成以上任务前，README 与发布说明不得宣称前端重设计或首次引导已经完成。
+## Completion Record
+
+- 全部 10 项任务、49 个 Step 已完成。
+- 2026-11-26 最终验收：后端 **83 项**、学习端组件 **40 项**、管理端路由 **3 项**、核心 E2E **3 项**、三视口视觉测试 **3 项**全部通过；两个前端生产构建成功。
+- 发布候选提交：`91159b1 test: verify complete memory learning experience`。
+- 后续内容供应链、离线作答或 FSRS 工作应另建计划，不重新打开本计划。

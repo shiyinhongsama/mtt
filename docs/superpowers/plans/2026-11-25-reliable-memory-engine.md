@@ -1,6 +1,6 @@
 # Reliable Review and Ebbinghaus Memory Engine Implementation Plan
 
-> **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
+> **Status:** Completed on 2026-11-26. This file is an implementation and verification record, not a pending work queue.
 
 **Goal:** Build a reliable, minute-level review API with personalized memory stability, short relearning, rating previews, accurate plan progress, and backward-compatible data migration.
 
@@ -46,7 +46,7 @@
 - Produces: `decide(snapshot: MemorySnapshot, rating: Rating, now: datetime, target_retention: float = 0.85) -> MemoryDecision`.
 - Produces: `preview(snapshot: MemorySnapshot, now: datetime) -> dict[str, dict[str, object]]`.
 
-- [ ] **Step 1: Write failing deterministic tests**
+- [x] **Step 1: Write failing deterministic tests**
 
 ```python
 from datetime import UTC, datetime, timedelta
@@ -91,12 +91,12 @@ def test_interval_is_clamped_and_preview_does_not_mutate():
     assert old.stability_days == 10_000.0
 ```
 
-- [ ] **Step 2: Run the tests and verify RED**
+- [x] **Step 2: Run the tests and verify RED**
 
 Run: `uv run --frozen pytest tests/test_memory.py -q`
 Expected: collection fails because `mtt.schedule.memory` does not exist.
 
-- [ ] **Step 3: Implement the pure engine**
+- [x] **Step 3: Implement the pure engine**
 
 ```python
 """Transparent Ebbinghaus-inspired exponential forgetting model."""
@@ -168,12 +168,12 @@ def preview(snapshot: MemorySnapshot, now: datetime) -> dict[str, dict[str, obje
     return result
 ```
 
-- [ ] **Step 4: Run tests and verify GREEN**
+- [x] **Step 4: Run tests and verify GREEN**
 
 Run: `uv run --frozen pytest tests/test_memory.py -q`
 Expected: `4 passed`.
 
-- [ ] **Step 5: Commit the reviewed unit**
+- [x] **Step 5: Commit the reviewed unit**
 
 ```bash
 git add mtt/schedule/memory.py tests/test_memory.py
@@ -200,7 +200,7 @@ git commit -m "feat: add personalized memory engine"
 - Decision fields on `ReviewLog` are immutable snapshots used for exact idempotent responses and historical schedule explanations.
 - Produces `run_migrations() -> None`; `init_db()` delegates to it after importing all models.
 
-- [ ] **Step 1: Write failing fresh-install and legacy-upgrade tests**
+- [x] **Step 1: Write failing fresh-install and legacy-upgrade tests**
 
 ```python
 import sqlite3
@@ -281,12 +281,12 @@ def test_fresh_install_uses_current_schema(tmp_path: Path, monkeypatch):
     assert "due_date" not in columns
 ```
 
-- [ ] **Step 2: Run migration tests and verify RED**
+- [x] **Step 2: Run migration tests and verify RED**
 
 Run: `uv run --frozen pytest tests/test_migrations.py -q`
 Expected: FAIL because Alembic and the new fields are absent.
 
-- [ ] **Step 3: Add Alembic and implement models/migrations**
+- [x] **Step 3: Add Alembic and implement models/migrations**
 
 Add `"alembic>=1.14"` to project dependencies, run `uv lock`, and configure Alembic with `render_as_batch=True` for SQLite. Use an empty `0001_baseline` revision. `0002_memory_state` must:
 
@@ -326,12 +326,12 @@ def run_migrations() -> None:
     # Managed: alembic_version exists -> upgrade head.
 ```
 
-- [ ] **Step 4: Run migration and existing model tests**
+- [x] **Step 4: Run migration and existing model tests**
 
 Run: `uv run pytest tests/test_migrations.py tests/test_schedule.py -q`
 Expected: new migration tests PASS; any old `due_date` test failures are resolved in Task 3, not by keeping a second writable date column.
 
-- [ ] **Step 5: Commit the reviewed unit**
+- [x] **Step 5: Commit the reviewed unit**
 
 ```bash
 git add pyproject.toml uv.lock mtt/schedule/models.py mtt/db.py mtt/alembic.ini mtt/alembic tests/test_migrations.py
@@ -350,7 +350,7 @@ git commit -m "feat: migrate review state to memory model"
 - `ReviewSubmit` adds `plan_id: int | None = None`, constrains `duration_ms >= 0`, and validates rating with `Literal`.
 - POST `/api/v1/reviews` returns `log_id`, `idempotent`, `state`, and `decision`.
 
-- [ ] **Step 1: Write failing API tests**
+- [x] **Step 1: Write failing API tests**
 
 ```python
 def test_review_returns_memory_decision(client, auth, active_question):
@@ -404,12 +404,12 @@ def test_concurrent_replay_writes_one_log_and_one_rep(client, auth, active_quest
     assert len(states) == 1 and states[0]["reps"] == 1
 ```
 
-- [ ] **Step 2: Run the tests and verify RED**
+- [x] **Step 2: Run the tests and verify RED**
 
 Run: `uv run --frozen pytest tests/test_schedule.py -q`
 Expected: failures on missing `decision`, `due_at`, and replay behavior.
 
-- [ ] **Step 3: Implement transactional submission**
+- [x] **Step 3: Implement transactional submission**
 
 Replace the old fixed-multiplier call with:
 
@@ -473,12 +473,12 @@ Return this exact shape:
 }
 ```
 
-- [ ] **Step 4: Run submission and regression tests**
+- [x] **Step 4: Run submission and regression tests**
 
 Run: `uv run --frozen pytest tests/test_schedule.py tests/test_api_skeleton.py -q`
 Expected: PASS with no fixed-multiplier writes remaining.
 
-- [ ] **Step 5: Commit the reviewed unit**
+- [x] **Step 5: Commit the reviewed unit**
 
 ```bash
 git add mtt/schedule/router.py tests/test_schedule.py tests/conftest.py
@@ -496,7 +496,7 @@ git commit -m "fix: make review submission reliable and idempotent"
 - Each item includes `state.due_at` and `rating_previews` from `memory.preview()`.
 - Queue ordering is `due_at ASC, question_id ASC`; new active questions fill remaining capacity.
 
-- [ ] **Step 1: Write failing queue tests**
+- [x] **Step 1: Write failing queue tests**
 
 ```python
 from datetime import UTC, datetime, timedelta
@@ -540,12 +540,12 @@ def test_due_queue_orders_by_due_at(client, auth, admin):
     assert ids.index(earlier.id) < ids.index(later.id)
 ```
 
-- [ ] **Step 2: Run tests and verify RED**
+- [x] **Step 2: Run tests and verify RED**
 
 Run: `uv run --frozen pytest tests/test_schedule.py -k 'due_queue or future_minutes' -q`
 Expected: FAIL on missing previews and old date-only filtering.
 
-- [ ] **Step 3: Implement the queue without N+1 state lookups**
+- [x] **Step 3: Implement the queue without N+1 state lookups**
 
 Use one left outer join from `Question` to `QuestionState` for the current user, filter `Question.owner_id`, `Question.status == "active"`, and `(QuestionState.due_at <= now OR QuestionState.id IS NULL)`. Apply bank/category filters before `LIMIT`. Build each snapshot directly from the joined row and call:
 
@@ -565,12 +565,12 @@ item["rating_previews"] = preview(snapshot, now)
 
 Do not keep a second `due_date` query path.
 
-- [ ] **Step 4: Run queue and full schedule tests**
+- [x] **Step 4: Run queue and full schedule tests**
 
 Run: `uv run --frozen pytest tests/test_schedule.py -q`
 Expected: PASS.
 
-- [ ] **Step 5: Commit the reviewed unit**
+- [x] **Step 5: Commit the reviewed unit**
 
 ```bash
 git add mtt/schedule/router.py tests/test_schedule.py
@@ -589,7 +589,7 @@ git commit -m "feat: add minute-level review queue and rating previews"
 - Review submissions may attribute a log to a validated `plan_id`.
 - Legacy logs with null `plan_id` fall back to the plan's bank scope.
 
-- [ ] **Step 1: Write failing progress tests**
+- [x] **Step 1: Write failing progress tests**
 
 ```python
 def test_relearning_does_not_inflate_daily_goal(client, auth, active_question):
@@ -656,12 +656,12 @@ def test_legacy_log_uses_bank_scope(client, auth, admin):
     assert current["today_done"] == 1
 ```
 
-- [ ] **Step 2: Run plan tests and verify RED**
+- [x] **Step 2: Run plan tests and verify RED**
 
 Run: `uv run --frozen pytest tests/test_plans.py -q`
 Expected: the repeated-answer case returns `2` before the fix.
 
-- [ ] **Step 3: Implement distinct progress**
+- [x] **Step 3: Implement distinct progress**
 
 ```python
 from sqlalchemy import and_, or_
@@ -686,12 +686,12 @@ done = session.exec(stmt).one()
 
 Do not count AI help requests or duplicate rows. Keep `goal_met = done >= daily_goal` unchanged.
 
-- [ ] **Step 4: Run plan and schedule regression tests**
+- [x] **Step 4: Run plan and schedule regression tests**
 
 Run: `uv run --frozen pytest tests/test_plans.py tests/test_schedule.py -q`
 Expected: PASS.
 
-- [ ] **Step 5: Commit the reviewed unit**
+- [x] **Step 5: Commit the reviewed unit**
 
 ```bash
 git add mtt/schedule/plans.py mtt/schedule/router.py tests/test_plans.py
@@ -710,7 +710,7 @@ git commit -m "fix: count unique questions toward daily goals"
 - Version-1 payloads containing `due_date` and `interval_days` remain importable.
 - Import replay remains idempotent.
 
-- [ ] **Step 1: Write failing compatibility tests**
+- [x] **Step 1: Write failing compatibility tests**
 
 ```python
 from datetime import datetime
@@ -764,12 +764,12 @@ def test_new_export_roundtrip_preserves_memory_state(client, auth, active_questi
         assert actual[field] == expected[field]
 ```
 
-- [ ] **Step 2: Run data tests and verify RED**
+- [x] **Step 2: Run data tests and verify RED**
 
 Run: `uv run --frozen pytest tests/test_data.py -q`
 Expected: FAIL on version 2 and memory-field preservation.
 
-- [ ] **Step 3: Implement a version adapter**
+- [x] **Step 3: Implement a version adapter**
 
 Add one adapter at the import boundary:
 
@@ -792,12 +792,12 @@ def _adapt_state(item: dict) -> dict:
 
 Use the existing ID remapping and fingerprints. Export raw model fields as JSON; never drop unknown memory fields during wipe/import roundtrip.
 
-- [ ] **Step 4: Run data and full migration tests**
+- [x] **Step 4: Run data and full migration tests**
 
 Run: `uv run --frozen pytest tests/test_data.py tests/test_migrations.py -q`
 Expected: PASS.
 
-- [ ] **Step 5: Commit the reviewed unit**
+- [x] **Step 5: Commit the reviewed unit**
 
 ```bash
 git add mtt/data/service.py mtt/data/router.py tests/test_data.py
@@ -817,7 +817,7 @@ git commit -m "feat: preserve memory state during data migration"
 - README documents the exponential approximation as an initial model, not a guarantee.
 - API behavior and migration commands match the implementation exactly.
 
-- [ ] **Step 1: Add a failing startup smoke test**
+- [x] **Step 1: Add a failing startup smoke test**
 
 ```python
 from datetime import datetime
@@ -842,12 +842,12 @@ def test_startup_initializes_memory_schema_and_backup(client):
     assert backups and all(path.stat().st_size > 0 for path in backups)
 ```
 
-- [ ] **Step 2: Verify RED**
+- [x] **Step 2: Verify RED**
 
 Run: `uv run --frozen pytest tests/test_api_skeleton.py -q`
 Expected: FAIL if startup still calls a non-migration path or backup does not run under the lifespan context.
 
-- [ ] **Step 3: Implement startup and update docs**
+- [x] **Step 3: Implement startup and update docs**
 
 Keep the existing startup entry point but ensure `init_db()` finishes migration before `auto_backup()`. Document:
 
@@ -861,7 +861,7 @@ Keep the existing startup entry point but ensure `init_db()` finishes migration 
 
 Update old references to `due_date`, fixed multipliers, and 21-day internal state. Keep the user-facing “已掌握” label only as an interval-based display label.
 
-- [ ] **Step 4: Run complete verification**
+- [x] **Step 4: Run complete verification**
 
 Run:
 
@@ -879,7 +879,7 @@ cd ../moneyToTipConsole && npm run build
 
 Expected: both builds exit 0. If the old frontend requires temporary compatibility, keep response keys `state.label` and existing question fields until the frontend plan removes them.
 
-- [ ] **Step 5: Review the diff and commit**
+- [x] **Step 5: Review the diff and commit**
 
 ```bash
 cd ..
@@ -900,7 +900,9 @@ The final review must confirm no unrelated frontend redesign, no fixed-multiplie
 3. After Task 6: demonstrate v1 import and v2 export/import roundtrip.
 4. After Task 7: provide the exact full-test count and both frontend build results.
 
-## Next Plans
+## Completion Record
 
-- `2026-11-25-mobile-review-experience.md`: reliable ReviewSession reducer, focused review UI, Today/Library/Insights pages, component system, and Playwright coverage.
-- `2026-11-25-onboarding-and-settings.md`: password login for App, first-run sample content, server-side active plans, review preferences, and data-management integration.
+- All 35 implementation and verification steps are complete.
+- Final backend regression on 2026-11-26: **83 passed**; both frontend production builds also passed.
+- Fresh-install migration, legacy upgrade, idempotent review writes, minute-level previews, distinct-question progress, and v1/v2 data compatibility are covered by the backend suite.
+- The planned mobile review, onboarding, settings, and Playwright work was consolidated into [Memory Experience Redesign](2026-11-25-memory-experience-redesign.md), which is also complete.

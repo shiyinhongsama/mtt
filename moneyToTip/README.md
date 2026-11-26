@@ -92,4 +92,5 @@ mtt/
 - [ ] capture：Markdown 目录 → 标准导入包（等项目完整后再做）
 - [ ] generate：材料 → 客观题 → 校验 → 预览区（依赖 capture）
 - [ ] 离线题包：未来 N 日题目预下载、离线回写（R-api-06、R-session-08）
-- [ ] anki / mcp：排在核心闭环之后
+- [x] anki：`.apkg` 与 TSV 导入、牌组层级映射和学习进度迁移
+- [ ] mcp：智能体接入，排在核心内容闭环之后

@@ -99,7 +99,7 @@ interval = -S × ln(target_retention)
 - 不擅自清空数据、弹出 stash、强推、改 ACL 或删除用户文件；破坏性操作先确认。
 - 小步提交，提交信息使用 `feat:`、`fix:`、`test:`、`docs:`、`refactor:` 等明确前缀。
 - 完成功能后更新 README 与设计状态；计划任务只有完成测试和验收后才能勾选。
-- 当前后续工作以 `docs/superpowers/plans/2026-11-25-memory-experience-redesign.md` 为准，不重复实现已完成的记忆引擎。
+- 可靠记忆引擎与核心体验重设计均已完成并通过验收；后续工作先建立新计划，不重复实现既有能力。
 
 ## 8. 完成定义
 
