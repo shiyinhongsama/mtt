@@ -23,7 +23,8 @@ npm run build    # 产物 dist/，由服务端挂在 /app/，或任意静态托�
 ## 结构
 
 - `src/api/` — API 客户端 + 契约类型（与 moneyToTip 服务端对齐）
-- `src/pages/` — 刷题 / 加题 / 预览区 / 统计 / 登录
+- `src/features/` — 复习会话状态机与快照、今日计划、未来负荷、题库批量确认、记忆洞察组件
+- `src/pages/` — 今日 / 专注复习 / 学习计划 / 题库 / 导入 / 记忆洞察 / 我的 / 登录 / 首次引导
 - `src/components/` — QuestionCard / AnswerArea / FeedbackPanel / CategorySelect 等
 
 管理端是独立工程 [moneyToTipConsole](../moneyToTipConsole)（`/console/`，账号密码登录）。

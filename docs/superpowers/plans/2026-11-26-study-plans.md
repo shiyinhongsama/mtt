@@ -1,6 +1,6 @@
 # Study Plans Implementation Plan
 
-> **状态：** 待执行。任务与步骤只有完成测试和验收后才能勾选。
+> **状态：** 已于 2026-11-26 完成全部 7 项任务与交付验收（后端 83 项、学习端组件 54 项、管理端 3 项、E2E 4 项通过，学习端生产构建成功）。本文保留为实施和验收记录，不再作为待执行计划。
 
 **Goal:** 让每个学习计划在今日页可见、可进入、独立计进度，并修复「完成的复习会话被重放」的缺陷。
 
@@ -49,7 +49,7 @@
 - `loadReviewSnapshot(userId)`：遇到「已完成」的快照时清除并返回 `null`。
 - `useReviewSession`：只在本次挂载后拉取成功、没有更新的请求在途、且尚未建立会话时派发 `QUEUE_LOADED`；会话完成后清除快照。
 
-- [ ] **Step 1: 写复现测试**
+- [x] **Step 1: 写复现测试**
 
 快照测试：完成的会话保存后读取为 `null`。
 
@@ -61,9 +61,9 @@ expect(await screen.findByText("测试题目 2")).toBeVisible();
 expect(dueRequests).toBe(1);
 ```
 
-- [ ] **Step 2: 实现修复**
+- [x] **Step 2: 实现修复**
 
-- [ ] **Step 3: 回归**
+- [x] **Step 3: 回归**
 
 ```bash
 cd moneyToTipApp && npm test
@@ -83,13 +83,13 @@ cd moneyToTipApp && npm test
 - 返回值 `plan`：本轮绑定的计划，自由模式为 `null`。
 - 路由：`/review?plan=<id>`。
 
-- [ ] **Step 1: 写会话绑定测试**
+- [x] **Step 1: 写会话绑定测试**
 
 路由为 `/review?plan=7`，计划每日目标 5、今日已完成 1、绑定题库 3。期望拉题请求为 `limit=4&bank_id=3`，副标题显示计划名，提交体含 `plan_id: 7`。另加一例：已达成计划的会话拉 20 题。
 
-- [ ] **Step 2: 实现计划绑定，移除「第一个今日计划」的隐式选择**
+- [x] **Step 2: 实现计划绑定，移除「第一个今日计划」的隐式选择**
 
-- [ ] **Step 3: 回归**
+- [x] **Step 3: 回归**
 
 ```bash
 cd moneyToTipApp && npm test
@@ -110,19 +110,19 @@ cd moneyToTipApp && npm test
 - `TodayPlans({ plans, banks, failed, onRetry })`：渲染「今日计划」区；未达成计划有「开始 / 继续」，已达成计划有「已达成」标记和「加练」。
 - 今日页：有今日计划时总览卡不放主按钮；没有时保留「继续今日复习」并提供学习计划入口。
 
-- [ ] **Step 1: 写今日页测试**
+- [x] **Step 1: 写今日页测试**
 
 - 两个今日计划（一个未达成、一个已达成）：各有一张卡片和自己的进度，链接为 `/review?plan=<id>`；页面上没有「继续今日复习」。
 - 没有今日计划：有「继续今日复习」和学习计划入口。
 - 计划接口失败：显示失败原因，重试后恢复。
 
-- [ ] **Step 2: 实现今日计划卡片与入口**
+- [x] **Step 2: 实现今日计划卡片与入口**
 
-- [ ] **Step 3: 三视口检查**
+- [x] **Step 3: 三视口检查**
 
 在临时实例上用真实浏览器检查 360 / 768 / 1440px：无横向溢出，按钮不小于 44×44px，加载、空态、错误态齐全。
 
-- [ ] **Step 4: 回归**
+- [x] **Step 4: 回归**
 
 ```bash
 cd moneyToTipApp && npm test
@@ -138,9 +138,9 @@ cd moneyToTipApp && npm test
 - Modify: `moneyToTipApp/src/pages/PlansPage.tsx`
 - Modify: `moneyToTipApp/src/pages/PlansPage.test.tsx`
 
-- [ ] **Step 1: 写「我的」空态入口测试与计划页标题测试**
-- [ ] **Step 2: 空态提供「新建学习计划」链接；「训练计划」统一改为「学习计划」**
-- [ ] **Step 3: 回归**
+- [x] **Step 1: 写「我的」空态入口测试与计划页标题测试**
+- [x] **Step 2: 空态提供「新建学习计划」链接；「训练计划」统一改为「学习计划」**
+- [x] **Step 3: 回归**
 
 ```bash
 cd moneyToTipApp && npm test
@@ -154,7 +154,7 @@ cd moneyToTipApp && npm test
 - Create: `moneyToTipApp/e2e/study-plans.spec.ts`
 - Modify: `moneyToTipApp/package.json`
 
-- [ ] **Step 1: 写「两个计划各完成一轮」**
+- [x] **Step 1: 写「两个计划各完成一轮」**
 
 两个题库各建一个每天 2 题的计划并加入今日。从今日页依次完成两个计划：
 
@@ -162,11 +162,15 @@ cd moneyToTipApp && npm test
 - 每个计划的进度独立，全部完成后今日目标达成。
 - 复习日志没有重复题目的多余记录。
 
-- [ ] **Step 2: 把新用例加入 `npm run test:e2e` 并执行**
+- [x] **Step 2: 把新用例加入 `npm run test:e2e` 并执行**
 
 ```bash
 cd moneyToTipApp && npm run test:e2e
 ```
+
+- [x] **Step 3: 变异检查**
+
+把 `useReviewSession` 里的队列闸门改回「只要有缓存数据就建立会话」，该用例必须失败；恢复后重新通过。检查中发现复习页会把未建立的队列显示成完成态，已一并修复并补组件测试。
 
 ---
 
@@ -177,12 +181,12 @@ cd moneyToTipApp && npm run test:e2e
 - Modify: `docs/superpowers/specs/2026-11-26-study-plans-design.md`
 - Modify: `docs/superpowers/plans/2026-11-26-study-plans.md`
 
-- [ ] **Step 1: 全量回归**
+- [x] **Step 1: 全量回归**
 
 ```bash
 cd moneyToTip && uv run --frozen pytest -q
 cd ../moneyToTipApp && npm test && npm run build
 ```
 
-- [ ] **Step 2: 更新 README 与文档状态，勾选已完成步骤**
-- [ ] **Step 3: 重新构建 App，供本地运行实例直接使用**
+- [x] **Step 2: 更新 README 与文档状态，勾选已完成步骤**
+- [x] **Step 3: 重新构建 App，供本地运行实例直接使用**
