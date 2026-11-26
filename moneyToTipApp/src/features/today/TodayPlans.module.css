@@ -1,0 +1,23 @@
+.section { margin-top: 26px; }
+.heading { display: flex; align-items: center; justify-content: space-between; }
+.heading h2 { font-family: var(--font-display); font-size: 20px; }
+.textLink {
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 4px;
+  color: var(--color-accent);
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+.list { display: grid; gap: 12px; margin: 6px 0 0; padding: 0; list-style: none; }
+.card { padding: 18px 20px; border: 1.5px solid var(--color-line); border-radius: var(--radius-card); background: var(--color-surface); }
+.name { font-family: var(--font-display); font-size: 18px; line-height: 1.4; }
+.scope { margin: 4px 0 14px; color: var(--color-muted); font-size: 12px; }
+.track { height: 6px; overflow: hidden; border-radius: 99px; background: var(--color-line); }
+.track span { display: block; height: 100%; border-radius: inherit; background: var(--color-accent); transition: width var(--duration-normal); }
+.foot { display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-top: 14px; }
+.status { display: flex; align-items: center; gap: 8px; min-width: 0; color: var(--color-muted); font-size: 13px; }
+.met { font-style: normal; font-size: 11px; font-weight: 700; color: var(--color-success); border: 1px solid var(--color-success); padding: 1px 6px; white-space: nowrap; }
+.action { flex-shrink: 0; text-decoration: none; }

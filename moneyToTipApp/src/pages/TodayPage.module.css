@@ -17,6 +17,9 @@
 .estimate { color: var(--color-muted); font-size: 13px; }
 .actions { display: flex; gap: 12px; margin-top: 20px; }
 .actions a { text-decoration: none; }
+.actionPlaceholder { flex: 1; height: 48px; border-radius: var(--radius-control); background: var(--color-surface-pressed); }
+.planLink { display: flex; align-items: center; justify-content: center; min-height: 44px; margin-top: 10px; color: var(--color-accent); font-size: 14px; font-weight: 600; text-decoration: none; }
+.planError { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px; margin-top: 20px; padding: 16px 18px; border: 1.5px solid var(--color-accent); border-radius: var(--radius-card); background: var(--color-surface); font-size: 14px; line-height: 1.6; }
 .primaryLink { flex: 1; }
 .insightLink { display: flex; align-items: center; justify-content: space-between; margin-top: 20px; padding: 18px 4px; border-bottom: 1px solid var(--color-line); color: var(--color-ink); text-decoration: none; }
 .insightLink span:first-child { display: flex; flex-direction: column; gap: 5px; }
