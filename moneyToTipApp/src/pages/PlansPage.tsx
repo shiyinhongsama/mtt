@@ -68,9 +68,9 @@ export default function PlansPage() {
 
   return (
     <div>
-      <div className="view-title">训练计划</div>
-      <p className="plan-hint">计划选择会同步到服务端；今日进度只统计计划范围内的不同题目。</p>
-      {plans.data.length === 0 ? <EmptyState title="还没有计划" description="设定每日目标，让复习更有节奏。" /> : plans.data.map((plan) => {
+      <h1 className="view-title">学习计划</h1>
+      <p className="plan-hint">每个计划单独复习、单独计进度；今日进度只统计计划范围内的不同题目。</p>
+      {plans.data.length === 0 ? <EmptyState title="还没有学习计划" description="设定每日目标，让复习更有节奏。" /> : plans.data.map((plan) => {
         const isCurrent = activeIds.includes(plan.id);
         const percentage = Math.min(100, Math.round(plan.today_done / plan.daily_goal * 100));
         return (
@@ -92,7 +92,7 @@ export default function PlansPage() {
       })}
       {activeIds.length > 0 && <div className="li-actions" style={{ margin: "14px 0" }}><button disabled={saveActive.isPending} onClick={() => saveActive.mutate([])}>不用计划（自由刷题）</button></div>}
 
-      <div className="view-title" style={{ fontSize: 17, marginTop: 22 }}>新建计划</div>
+      <h2 className="view-title" style={{ fontSize: 17, marginTop: 22 }}>新建计划</h2>
       <div className="field"><label>计划名称</label><input value={name} placeholder="如：Java 面试每日十题" onChange={(event) => setName(event.target.value)} /></div>
       <div className="field"><label>题库</label><select value={bankId ?? ""} onChange={(event) => setBankId(event.target.value ? Number(event.target.value) : null)}><option value="">全部题库</option>{banks.data?.map((bank) => <option key={bank.id} value={bank.id}>{bank.name}</option>)}</select></div>
       <div className="field"><label>每日目标（题）</label><input type="number" min={1} max={200} value={goal} onChange={(event) => setGoal(Number(event.target.value))} /></div>

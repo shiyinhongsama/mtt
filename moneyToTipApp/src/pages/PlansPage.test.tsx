@@ -42,3 +42,21 @@ it("uses server preferences instead of a different local selection", async () =>
   expect(writes).toEqual([[1, 2]]);
   expect(localStorage.getItem("mtt_active_plans")).toBe("[2]");
 });
+
+it("calls them study plans and explains that each plan is reviewed on its own", async () => {
+  setToken("valid");
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url === "/api/v1/plans") return Response.json([]);
+    if (url === "/api/v1/questions/banks") return Response.json([]);
+    if (url === "/api/v1/plans/active") return Response.json({ plan_ids: [] });
+    throw new Error(`Unexpected request: ${url}`);
+  }));
+  const client = new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
+  render(<QueryClientProvider client={client}><PlansPage /></QueryClientProvider>);
+
+  expect(await screen.findByRole("heading", { level: 1, name: "学习计划" })).toBeVisible();
+  expect(screen.getByRole("heading", { level: 2, name: "新建计划" })).toBeVisible();
+  expect(screen.getByText("每个计划单独复习、单独计进度；今日进度只统计计划范围内的不同题目。")).toBeVisible();
+  expect(screen.getByText("还没有学习计划")).toBeVisible();
+});

@@ -38,3 +38,19 @@ it("confirms in app and clears both credentials and the review snapshot on logou
   expect(localStorage.getItem("mtt_review_snapshot_v2")).toBeNull();
   expect(confirm).not.toHaveBeenCalled();
 });
+
+it("links to the plans page when there are no plans yet", async () => {
+  setToken("user-token");
+  vi.stubGlobal("fetch", vi.fn(async (input: RequestInfo | URL) => {
+    const url = String(input);
+    if (url === "/api/v1/identity/me") return Response.json({ id: 7, username: "learner", role: "user" });
+    if (url === "/api/v1/stats") return Response.json({ reviewed_today: 0, due_today: 0, mature_count: 0, active_questions: 0 });
+    if (url === "/api/v1/plans") return Response.json([]);
+    if (url === "/api/v1/identity/tokens") return Response.json([]);
+    throw new Error(`Unexpected request: ${url}`);
+  }));
+  renderAt("/me", <MePage />);
+
+  expect(await screen.findByRole("link", { name: /新建学习计划/ })).toHaveAttribute("href", "#/plans");
+  expect(screen.getByText("还没有学习计划")).toBeVisible();
+});

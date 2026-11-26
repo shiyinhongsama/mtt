@@ -76,7 +76,10 @@ export default function MePage() {
 
       <div className="me-section-title">我的计划</div>
       {plans.length === 0 ? (
-        <div className="me-empty">还没有训练计划</div>
+        <a className="me-row" href="#/plans">
+          <span>还没有学习计划</span>
+          <span className="me-row-right">新建学习计划 →</span>
+        </a>
       ) : (
         plans.map((p) => (
           <a className="me-row" href="#/plans" key={p.id}>
