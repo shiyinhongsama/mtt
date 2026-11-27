@@ -5,10 +5,16 @@
 - 树形分类创建（R-corpus-02）
 """
 
-from fastapi import APIRouter, Depends, HTTPException
+import json
+from datetime import datetime
+from urllib.parse import quote
+
+from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlmodel import Session, func, or_, select
 
+from mtt.corpus import transfer
 from mtt.corpus.models import Category, Question, QuestionBank
 from mtt.corpus.service import create_question, ensure_default_bank, to_dict
 from mtt.corpus.validation import validate_question
@@ -136,6 +142,36 @@ def delete_bank(bank_id: int, user: User = Depends(get_current_user),
     session.commit()
     return {"deleted": bank_id, "moved_to": default.id}
 
+
+@router.get("/banks/{bank_id}/export")
+def export_bank(bank_id: int, export_format: str = Query(default="json", alias="format"),
+                user: User = Depends(get_current_user),
+                session: Session = Depends(get_session)) -> Response:
+    """按题库导出题目内容：JSON 便于再导入，CSV 便于在表格软件里查看和编辑。"""
+    bank = transfer.owned_bank(session, user.id, bank_id)
+    if bank is None:
+        raise HTTPException(404, "bank not found")
+    if export_format not in ("json", "csv"):
+        raise HTTPException(422, "format must be json or csv")
+    stamp = datetime.now().strftime("%Y-%m-%d")
+    if export_format == "json":
+        payload = json.dumps(transfer.export_bank_json(session, user.id, bank),
+                             ensure_ascii=False, indent=2).encode("utf-8")
+        media_type, extension = "application/json; charset=utf-8", "json"
+    else:
+        # BOM 让表格软件按 UTF-8 打开中文
+        payload = transfer.export_bank_csv(session, user.id, bank).encode("utf-8-sig")
+        media_type, extension = "text/csv; charset=utf-8", "csv"
+    filename = f"题库-{bank.name}-{stamp}.{extension}"
+    return Response(
+        content=payload,
+        media_type=media_type,
+        headers={
+            "Content-Disposition":
+                f"attachment; filename=\"bank-{bank.id}-{stamp}.{extension}\"; "
+                f"filename*=UTF-8''{quote(filename)}",
+        },
+    )
 
 @router.get("")
 def list_questions(status: str | None = "active", bank_id: int | None = None,
