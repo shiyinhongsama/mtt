@@ -1,6 +1,6 @@
 # Bank Transfer Implementation Plan
 
-> **状态：** 待执行。任务与步骤只有完成测试和验收后才能勾选。
+> **状态：** 已于 2026-11-26 完成全部 5 项任务与交付验收（后端 90 项、学习端组件 59 项、管理端 5 项、E2E 4 项通过，两个前端生产构建成功，`npm run api:check` 通过）。本文保留为实施和验收记录，不再作为待执行计划。
 
 **Goal:** 在管理端题库页按题库导出（JSON / CSV）和导入（JSON / CSV / TSV）题目，并给出可核对的导入报告。
 
@@ -46,12 +46,12 @@
 **Interfaces:**
 - `GET /api/v1/questions/banks/{bank_id}/export?format=json|csv`：附件响应；JSON 为 `moneytotip-bank` v1，CSV 十列。
 
-- [ ] **Step 1: 写导出测试**
+- [x] **Step 1: 写导出测试**
 
 JSON 只含该题库的题、分类为 `::` 路径、不含状态与日志；CSV 表头与中文文案正确、选项一格一行；他人题库 404。
 
-- [ ] **Step 2: 实现导出**
-- [ ] **Step 3: 回归**
+- [x] **Step 2: 实现导出**
+- [x] **Step 3: 回归**
 
 ```bash
 cd moneyToTip && uv run --frozen pytest tests/test_bank_transfer.py -q
@@ -69,12 +69,12 @@ cd moneyToTip && uv run --frozen pytest tests/test_bank_transfer.py -q
 **Interfaces:**
 - `POST /api/v1/questions/banks/{bank_id}/import`（multipart `file`）：返回 `created`、`duplicates`、`by_status`、`invalid`、`needs_review`、`truncated`。
 
-- [ ] **Step 1: 写导入测试**
+- [x] **Step 1: 写导入测试**
 
 CSV 往返、JSON 数组与题库文件、中英文表头与 TSV、去重与无效行、降级待确认、缺表头 / 空文件 / 格式不符 422、他人题库 404。
 
-- [ ] **Step 2: 实现导入**
-- [ ] **Step 3: 回归**
+- [x] **Step 2: 实现导入**
+- [x] **Step 3: 回归**
 
 ```bash
 cd moneyToTip && uv run --frozen pytest -q
@@ -88,11 +88,11 @@ cd moneyToTip && uv run --frozen pytest -q
 - Modify: `moneyToTipConsole/src/pages/BanksPage.tsx`
 - Test: `moneyToTipConsole/src/pages/BanksPage.test.tsx`
 
-- [ ] **Step 1: 写组件测试**
+- [x] **Step 1: 写组件测试**
 
 行内导出带凭证请求导出接口；导入后展示报告并刷新题库列表。
-- [ ] **Step 2: 实现导出菜单、导入弹窗与报告**
-- [ ] **Step 3: 回归与构建**
+- [x] **Step 2: 实现导出菜单、导入弹窗与报告**
+- [x] **Step 3: 回归与构建**
 
 ```bash
 cd moneyToTipConsole && npm test && npm run build
@@ -108,7 +108,9 @@ cd moneyToTipConsole && npm test && npm run build
 - Modify: `docs/superpowers/specs/2026-11-26-bank-transfer-design.md`
 - Modify: `docs/superpowers/plans/2026-11-26-bank-transfer.md`
 
-- [ ] **Step 1: 重新生成学习端 OpenAPI 类型并确认无漂移**
-- [ ] **Step 2: 全量回归（后端、管理端、学习端、E2E）与两个前端的构建**
-- [ ] **Step 3: 重启本地实例并在真实浏览器里核对题库页**
-- [ ] **Step 4: 更新 README 与文档状态**
+- [x] **Step 1: 重新生成学习端 OpenAPI 类型并确认无漂移**
+- [x] **Step 2: 全量回归（后端、管理端、学习端、E2E）与两个前端的构建**
+- [x] **Step 3: 重启本地实例并在真实浏览器里核对题库页**
+- [x] **Step 4: 更新 README 与文档状态**
+
+真实浏览器验收记录：在隔离实例登录管理端，按题库下载 JSON / CSV；导入包含新增、重复和不合格行的 CSV，页面显示「新增 2 道，跳过重复 1 道」及待确认原因；随后重新导出包含导入题目的 CSV。重启本地实例后，对真实 Python 题库只读导出 14 道题，未写入数据。
