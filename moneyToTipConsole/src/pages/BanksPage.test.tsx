@@ -82,6 +82,7 @@ it("imports a file into the selected bank and shows the row-level report", async
 
   expect(await screen.findByText(/新增 1 道/)).toBeVisible();
   expect(screen.getByText(/跳过重复 2 道/)).toBeVisible();
+  expect(screen.getByText(/待确认 1 道/)).toBeVisible();
   expect(screen.getByText(/缺少题面/)).toBeVisible();
   expect(screen.getByText(/选项不完整/)).toBeVisible();
   expect(screen.getByText(/选择题至少需要两个有效选项/)).toBeVisible();

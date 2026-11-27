@@ -16,6 +16,10 @@ interface BankImportReport {
 
 type BankExportFormat = "json" | "csv";
 
+const BANK_STATUS_LABELS: Record<string, string> = {
+  pending: "待确认", active: "复习中", flagged: "需修正", suspended: "已暂停",
+};
+
 export default function BanksPage() {
   const { message } = AntdApp.useApp();
   const [banks, setBanks] = useState<QuestionBank[]>([]);
@@ -214,7 +218,7 @@ export default function BanksPage() {
           <Card size="small" title="导入报告" style={{ marginTop: 16 }}>
             <div role="status">
               <p>导入完成：新增 {report.created} 道，跳过重复 {report.duplicates} 道。</p>
-              <p>状态：{Object.entries(report.by_status).map(([status, count]) => `${status} ${count} 道`).join("；") || "无新增"}</p>
+              <p>状态：{Object.entries(report.by_status).map(([status, count]) => `${BANK_STATUS_LABELS[status] ?? status} ${count} 道`).join("；") || "无新增"}</p>
               {report.invalid.length > 0 && (
                 <div style={{ marginTop: 12 }}>
                   <strong>未导入的行</strong>
