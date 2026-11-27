@@ -7,9 +7,10 @@
 
 import json
 from datetime import datetime
+from pathlib import Path
 from urllib.parse import quote
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, File, HTTPException, Query, UploadFile
 from fastapi.responses import Response
 from pydantic import BaseModel, Field
 from sqlmodel import Session, func, or_, select
@@ -172,6 +173,27 @@ def export_bank(bank_id: int, export_format: str = Query(default="json", alias="
                 f"filename*=UTF-8''{quote(filename)}",
         },
     )
+
+@router.post("/banks/{bank_id}/import")
+def import_bank(bank_id: int, file: UploadFile = File(...),
+                user: User = Depends(get_current_user),
+                session: Session = Depends(get_session)) -> dict:
+    """把 JSON / CSV / TSV 题目导入指定题库，并返回逐行报告。"""
+    bank = transfer.owned_bank(session, user.id, bank_id)
+    if bank is None:
+        raise HTTPException(404, "bank not found")
+    filename = file.filename or "import"
+    if Path(filename).suffix.lower() not in {".json", ".csv", ".tsv", ".txt"}:
+        raise HTTPException(422, "只支持 .json / .csv / .tsv / .txt")
+    content = file.file.read(64 * 1024 * 1024 + 1)
+    if len(content) > 64 * 1024 * 1024:
+        raise HTTPException(413, "文件超过 64MB 限制")
+    try:
+        return transfer.import_bank_file(session, user.id, bank, filename, content)
+    except ValueError as exc:
+        session.rollback()
+        raise HTTPException(422, str(exc)) from exc
+
 
 @router.get("")
 def list_questions(status: str | None = "active", bank_id: int | None = None,
